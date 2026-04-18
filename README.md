@@ -115,14 +115,69 @@ http://localhost:3000
 
 # 🔗 4. Conexión Frontend ↔ Backend
 
-La conexión ya está configurada dentro del frontend.
+## ⚠️ Regla CLAVE del proyecto
 
-👉 El frontend hace una petición automática al backend al iniciar.
+👉 **TODO el backend se trabaja como API REST**
 
-No es necesario modificar nada aquí, solo asegurarse de que:
+* Laravel **NO renderiza vistas**
+* Laravel **NO usa Blade para UI**
+* Laravel **SOLO expone endpoints en `/api`**
+* React es el único encargado de la interfaz
 
-* Backend esté corriendo en: `http://127.0.0.1:8000`
-* Frontend esté corriendo en: `http://localhost:3000`
+---
+
+## 📁 Organización backend
+
+Todo el desarrollo backend debe hacerse dentro de:
+
+```id="p6zrbp"
+/backend
+ ├── app/Http/Controllers/Api/
+ ├── routes/api.php
+```
+
+👉 Ya existen las carpetas organizadas por módulos:
+
+* `Auth/`
+* `User/`
+* `Job/`
+* `Bid/`
+
+---
+
+## 🚫 Prohibido en backend
+
+* Usar `routes/web.php` para lógica de la app
+* Crear vistas (`resources/views`)
+* Mezclar HTML con lógica
+
+---
+
+## ✅ Correcto
+
+Ejemplo de endpoint:
+
+```php id="6x3y0k"
+Route::get('/jobs', [JobController::class, 'index']);
+```
+
+Respuesta:
+
+```json id="6zt9kl"
+{
+  "status": "ok",
+  "data": [...]
+}
+```
+
+---
+
+## 🔄 Flujo correcto
+
+1. React hace request → `/api/...`
+2. Laravel procesa lógica
+3. Laravel responde JSON
+4. React renderiza
 
 ---
 
@@ -130,112 +185,60 @@ No es necesario modificar nada aquí, solo asegurarse de que:
 
 ## ✅ Paso único: verificar desde el frontend
 
-1. Abre el navegador en:
+1. Abrir:
 
-```
+```id="l2v7sb"
 http://localhost:3000
 ```
 
-2. Abre la consola del navegador (F12 → Console)
+2. Abrir consola (F12)
 
-3. Deberías ver un mensaje como:
+3. Debe aparecer:
 
-```
+```id="c6bz3n"
 Backend: { status: "ok", message: "API funcionando con controlador" }
 ```
 
-👉 Esto confirma:
+---
 
-* ✔ El frontend está corriendo
-* ✔ El backend está corriendo
-* ✔ La conexión entre ambos funciona correctamente
+## 🎯 Qué valida esto
+
+* ✔ Backend funcionando (`/api/test`)
+* ✔ Frontend conectado correctamente
+* ✔ Flujo API operativo
 
 ---
 
-## 🚨 Si NO aparece el mensaje
+## 🚨 Si falla
 
-Revisar:
+* Verificar backend:
 
-### 1. Backend activo
-
-```bash
+```bash id="7okq61"
 php artisan serve
 ```
 
----
+* Verificar URL del API en frontend:
 
-### 2. URL correcta del API en frontend
-
-Debe apuntar a:
-
-```
+```id="s1y4co"
 http://127.0.0.1:8000/api
 ```
 
 ---
 
-### 3. Consola del navegador
+## 📌 Nota importante
 
-* Errores de red (Network)
-* Errores CORS
-
----
-
-## 🎯 Resultado esperado
-
-Si ves el mensaje en consola → integración OK ✅
-Puedes empezar a desarrollar sin problemas.
-
-
-# 🔐 6. Endpoints principales
-
-## Auth
-
-* POST `/api/auth/login`
-* POST `/api/auth/register`
-* POST `/api/auth/logout`
-
-## Usuarios
-
-* GET `/api/users`
-* POST `/api/users`
-
-## Trabajos
-
-* GET `/api/jobs`
-* POST `/api/jobs`
-
-## Cotizaciones
-
-* GET `/api/bids`
-* POST `/api/bids`
+👉 Este proyecto **NO es Laravel tradicional (MVC con vistas)**
+👉 Es una **arquitectura desacoplada (API + SPA)**
 
 ---
 
-# 🚨 Problemas comunes
+## 🧠 Regla final
 
-## ❌ Error CORS
+* Laravel = API + lógica
+* React = UI + interacción
 
-Solución:
+Si algo rompe esta separación → se considera mala práctica
 
-* Revisar `config/cors.php` en Laravel
-* Permitir `localhost:3000`
-
----
-
-## ❌ Backend no responde
-
-* Verificar `php artisan serve`
-* Revisar puerto 8000
-
----
-
-## ❌ Front no conecta
-
-* Revisar URL de API
-* Ver consola del navegador
-
----
 
 # 🧩 Flujo de trabajo recomendado
 
