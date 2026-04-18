@@ -263,22 +263,3 @@ git push origin feature/nombre-feature
 ```
 
 ---
-
-# 🧠 Regla del proyecto
-
-* **Laravel = lógica y datos**
-* **React = interfaz**
-* Nunca mezclar responsabilidades
-
----
-
-# 📌 Nota final
-
-Si algo no funciona:
-
-* Revisar consola (frontend)
-* Revisar logs (`storage/logs/laravel.log`)
-
----
-
-Listo para desarrollo 🚀
