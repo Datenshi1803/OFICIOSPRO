@@ -31,7 +31,7 @@ Antes de empezar, asegúrate de tener instalado:
 # 🧠 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/TU-USUARIO/TU-REPO.git
+git clone https://github.com/Andrs-31/OFICIOSPRO.git
 cd OFICIOSPRO
 ```
 
