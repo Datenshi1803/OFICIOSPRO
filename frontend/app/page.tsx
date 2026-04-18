@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Wrench,
   Shield,
@@ -22,6 +22,13 @@ import { Card, CardContent } from "@/components/ui/card"
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  useEffect(() => {
+  fetch("http://127.0.0.1:8000/api/test")
+    .then(res => res.json())
+    .then(data => console.log("Backend:", data))
+    .catch(err => console.error("Error:", err));
+}, []);
 
   return (
     <div className="min-h-screen bg-background">
