@@ -115,45 +115,77 @@ http://localhost:3000
 
 # 🔗 4. Conexión Frontend ↔ Backend
 
-Asegúrate de que el frontend esté apuntando al backend:
+La conexión ya está configurada dentro del frontend.
 
-Ejemplo (axios / fetch):
+👉 El frontend hace una petición automática al backend al iniciar.
 
-```js
-const API_URL = "http://127.0.0.1:8000/api";
-```
+No es necesario modificar nada aquí, solo asegurarse de que:
+
+* Backend esté corriendo en: `http://127.0.0.1:8000`
+* Frontend esté corriendo en: `http://localhost:3000`
 
 ---
 
 # 🧪 5. Test básico de integración
 
-## Paso 1: Verificar backend
+## ✅ Paso único: verificar desde el frontend
 
-Abrir en el navegador:
+1. Abre el navegador en:
 
 ```
-http://127.0.0.1:8000/api/test
+http://localhost:3000
 ```
 
-👉 Debe devolver una respuesta JSON
+2. Abre la consola del navegador (F12 → Console)
+
+3. Deberías ver un mensaje como:
+
+```
+Backend: { status: "ok", message: "API funcionando con controlador" }
+```
+
+👉 Esto confirma:
+
+* ✔ El frontend está corriendo
+* ✔ El backend está corriendo
+* ✔ La conexión entre ambos funciona correctamente
 
 ---
 
-## Paso 2: Probar desde frontend
+## 🚨 Si NO aparece el mensaje
 
-Ejemplo simple:
+Revisar:
 
-```js
-useEffect(() => {
-  fetch("http://127.0.0.1:8000/api/test")
-    .then(res => res.json())
-    .then(data => console.log(data));
-}, []);
+### 1. Backend activo
+
+```bash
+php artisan serve
 ```
 
-👉 Si ves datos en consola → conexión OK ✅
+---
+
+### 2. URL correcta del API en frontend
+
+Debe apuntar a:
+
+```
+http://127.0.0.1:8000/api
+```
 
 ---
+
+### 3. Consola del navegador
+
+* Errores de red (Network)
+* Errores CORS
+
+---
+
+## 🎯 Resultado esperado
+
+Si ves el mensaje en consola → integración OK ✅
+Puedes empezar a desarrollar sin problemas.
+
 
 # 🔐 6. Endpoints principales
 
