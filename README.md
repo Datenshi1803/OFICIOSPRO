@@ -263,3 +263,80 @@ git push origin feature/nombre-feature
 ```
 
 ---
+
+# 📢 6. Gestión de cambios y documentación
+
+## ⚠️ Regla OBLIGATORIA del equipo
+
+👉 **Todo cambio importante de configuración debe ser:**
+
+1. Informado al equipo
+2. Documentado en este README
+
+---
+
+## 🔧 ¿Qué se considera un cambio importante?
+
+* Variables de entorno (`.env`)
+* Puertos (backend / frontend)
+* Configuración de CORS
+* Cambios en rutas API
+* Nuevas dependencias (npm / composer)
+* Cambios en estructura del proyecto
+* Autenticación (tokens, middleware, etc.)
+
+---
+
+## 📌 Ejemplo de cambio correcto
+
+Si alguien cambia el puerto del backend:
+
+❌ Incorrecto:
+
+* Cambiarlo localmente y no avisar
+
+✔ Correcto:
+
+1. Informar al equipo
+2. Actualizar README:
+
+```id="6yq7u1"
+Backend corre en: http://127.0.0.1:8001
+```
+
+---
+
+## 🧠 ¿Por qué es importante?
+
+* Evita errores entre colaboradores
+* Reduce tiempo perdido en debugging
+* Mantiene el proyecto consistente
+* Facilita onboarding de nuevos miembros
+
+---
+
+## 🚨 Regla práctica
+
+👉 Si alguien del equipo necesita preguntarte “¿por qué no me funciona?”
+👉 Probablemente faltó documentar algo aquí
+
+---
+
+## ✅ Buenas prácticas
+
+* Mantener el README actualizado SIEMPRE
+* Explicar cambios de forma clara y breve
+* No asumir configuraciones implícitas
+
+---
+
+## 🎯 Objetivo
+
+Que cualquier miembro pueda:
+
+1. Clonar el proyecto
+2. Seguir el README
+3. Ejecutar sin errores
+
+Sin necesidad de ayuda externa
+
