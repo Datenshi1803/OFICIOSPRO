@@ -22,6 +22,11 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'phone',
+        'avatar_url',
+        'bio',
+        'is_verified',
+        'verification_token',
     ];
 
     /**
@@ -45,5 +50,16 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+        public function jobsAsClient() {
+        return $this->hasMany(Job::class, 'client_id');
+    }
+
+    public function jobsAsTechnician() {
+        return $this->hasMany(Job::class, 'technician_id');
+    }
+
+    public function bids() {
+        return $this->hasMany(Bid::class, 'technician_id');
     }
 }
