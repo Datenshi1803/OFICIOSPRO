@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
-import { Wrench, Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft, Building, MapPin, CreditCard } from "lucide-react"
+import { Wrench, Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft, Building, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,23 +13,116 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { registerUser } from "@/lib/api"
 
-const zonasPanama = [
-  "Panamá Centro",
-  "San Francisco",
-  "Bella Vista",
-  "El Cangrejo",
-  "Obarrio",
-  "Costa del Este",
-  "Punta Pacífica",
-  "San Miguelito",
-  "Arraiján",
-  "La Chorrera",
-  "Colón",
-  "David",
-  "Santiago",
-  "Chitré",
-]
+// Datos de ubicaciones de Panamá
+const ubicacionesPanama = {
+  provincias: [
+    { id: "panama", nombre: "Panamá" },
+    { id: "colon", nombre: "Colón" },
+    { id: "chiriqui", nombre: "Chiriquí" },
+    { id: "cocle", nombre: "Coclé" },
+    { id: "herrera", nombre: "Herrera" },
+    { id: "los-santos", nombre: "Los Santos" },
+    { id: "veraguas", nombre: "Veraguas" },
+    { id: "darien", nombre: "Darién" },
+  ],
+  distritos: {
+    panama: [
+      { id: "panama-centro", nombre: "Panamá Centro" },
+      { id: "san-francisco", nombre: "San Francisco" },
+      { id: "bella-vista", nombre: "Bella Vista" },
+      { id: "punta-pacifica", nombre: "Punta Pacífica" },
+      { id: "costa-del-este", nombre: "Costa del Este" },
+      { id: "san-miguelito", nombre: "San Miguelito" },
+      { id: "parque-lehmann", nombre: "Parque Lhmann" },
+      { id: "24-de-diciembre", nombre: "24 de Diciembre" },
+    ],
+    colon: [
+      { id: "colon", nombre: "Colón" },
+      { id: "coco-sole", nombre: "Coco Sole" },
+      { id: "sabanitas", nombre: "Sabanitas" },
+      { id: "chagres", nombre: "Chagres" },
+    ],
+    chiriqui: [
+      { id: "david", nombre: "David" },
+      { id: "boquete", nombre: "Boquete" },
+      { id: "volcan", nombre: "Volcán" },
+      { id: "bugaba", nombre: "Bugaba" },
+    ],
+    cocle: [
+      { id: "penonome", nombre: "Penonomé" },
+      { id: "antón", nombre: "Antón" },
+      { id: "capellania", nombre: "Capellanía" },
+    ],
+    herrera: [
+      { id: "chitre", nombre: "Chitré" },
+      { id: "parita", nombre: "Parita" },
+      { id: "pesé", nombre: "Pesé" },
+    ],
+    "los-santos": [
+      { id: "las-tablas", nombre: "Las Tablas" },
+      { id: "macaracas", nombre: "Macaracas" },
+      { id: "pedasi", nombre: "Pedasí" },
+    ],
+    veraguas: [
+      { id: "santiago", nombre: "Santiago" },
+      { id: "calobre", nombre: "Calobre" },
+      { id: "cazales", nombre: "Cazales" },
+    ],
+    darien: [
+      { id: "yaviza", nombre: "Yaviza" },
+      { id: "pinogana", nombre: "Pinogana" },
+    ],
+  },
+  corregimientos: {
+    "panama-centro": [
+      { id: "casco-antiguo", nombre: "Casco Antiguo" },
+      { id: "santa-ana", nombre: "Santa Ana" },
+      { id: "calle-12", nombre: "Calle 12" },
+      { id: "el-cangrejo", nombre: "El Cangrejo" },
+      { id: "obarrio", nombre: "Obarrio" },
+    ],
+    "san-francisco": [
+      { id: "san-francisco", nombre: "San Francisco" },
+      { id: "jose-domingo", nombre: "José Domingo" },
+    ],
+    "bella-vista": [
+      { id: "bella-vista", nombre: "Bella Vista" },
+      { id: "marbella", nombre: "Marbella" },
+    ],
+    "punta-pacifica": [
+      { id: "punta-pacifica", nombre: "Punta Pacífica" },
+    ],
+    "costa-del-este": [
+      { id: "costa-del-este", nombre: "Costa del Este" },
+    ],
+    "san-miguelito": [
+      { id: "san-miguelito", nombre: "San Miguelito" },
+      { id: "victoria", nombre: "Victoria" },
+    ],
+    colon: [
+      { id: "colon-centro", nombre: "Colón Centro" },
+      { id: "nueva-colon", nombre: "Nueva Colón" },
+    ],
+    david: [
+      { id: "david-centro", nombre: "David Centro" },
+      { id: "bajo-boquete", nombre: "Bajo Boquete" },
+    ],
+    penonome: [
+      { id: "penonome-centro", nombre: "Penonomé Centro" },
+      { id: "cabuya", nombre: "Cabuya" },
+    ],
+    chitre: [
+      { id: "chitre-centro", nombre: "Chitré Centro" },
+      { id: "llano-bonito", nombre: "Llano Bonito" },
+    ],
+    santiago: [
+      { id: "santiago-centro", nombre: "Santiago Centro" },
+      { id: "canto-del-llano", nombre: "Canto del Llano" },
+    ],
+  },
+}
 
 function RegisterContent() {
   const searchParams = useSearchParams()
@@ -45,7 +138,24 @@ function RegisterContent() {
     telefono: "",
     password: "",
     zona: "",
+    provincia: "",
+    distrito: "",
+    corregimiento: "",
   })
+
+  // Estados para los selects de ubicación
+  const [clienteProvincia, setClienteProvincia] = useState("")
+  const [clienteDistrito, setClienteDistrito] = useState("")
+  const [clienteCorregimiento, setClienteCorregimiento] = useState("")
+
+  // Obtener distritos según la provincia seleccionada
+  const distritosOptions = clienteProvincia 
+    ? ubicacionesPanama.distritos[clienteProvincia as keyof typeof ubicacionesPanama.distritos] || []
+    : []
+  
+  const corregimientosOptions = clienteDistrito
+    ? ubicacionesPanama.corregimientos[clienteDistrito as keyof typeof ubicacionesPanama.corregimientos] || []
+    : []
 
   const [tecnicoData, setTecnicoData] = useState({
     nombre: "",
@@ -56,19 +166,77 @@ function RegisterContent() {
     zonas: [] as string[],
     descripcion: "",
     experiencia: "",
+    specialty: "",
+    provincia: "",
+    distrito: "",
+    corregimiento: "",
   })
 
-  const handleClienteSubmit = (e: React.FormEvent) => {
+  // Estados para los selects de ubicación del técnico
+  const [tecnicoProvincia, setTecnicoProvincia] = useState("")
+  const [tecnicoDistrito, setTecnicoDistrito] = useState("")
+  const [tecnicoCorregimiento, setTecnicoCorregimiento] = useState("")
+
+  // Obtener distritos según la provincia seleccionada para técnico
+  const tecnicoDistritosOptions = tecnicoProvincia
+    ? ubicacionesPanama.distritos[tecnicoProvincia as keyof typeof ubicacionesPanama.distritos] || []
+    : []
+
+  const tecnicoCorregimientosOptions = tecnicoDistrito
+    ? ubicacionesPanama.corregimientos[tecnicoDistrito as keyof typeof ubicacionesPanama.corregimientos] || []
+    : []
+
+  const handleClienteSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Cliente registration:", clienteData)
+    
+    try {
+      const response = await registerUser({
+        name: clienteData.nombre,
+        email: clienteData.email,
+        password: clienteData.password,
+        phone: clienteData.telefono,
+        role: 'client',
+        provincia: clienteProvincia,
+        distrito: clienteDistrito,
+        corregimiento: clienteCorregimiento,
+      })
+      
+      console.log('Registro exitoso:', response)
+      alert('¡Registro exitoso! Ahora puedes iniciar sesión.')
+      // Aquí podrías redirigir al login
+    } catch (error: any) {
+      console.error('Error en registro:', error)
+      alert(error.message || 'Error al registrar usuario')
+    }
   }
 
-  const handleTecnicoSubmit = (e: React.FormEvent) => {
+  const handleTecnicoSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (step === 1) {
       setStep(2)
     } else {
-      console.log("Tecnico registration:", tecnicoData)
+      try {
+        const response = await registerUser({
+          name: tecnicoData.nombre,
+          email: tecnicoData.email,
+          password: tecnicoData.password,
+          phone: tecnicoData.telefono,
+          role: 'technician',
+          provincia: tecnicoProvincia,
+          distrito: tecnicoDistrito,
+          corregimiento: tecnicoCorregimiento,
+          cedula: tecnicoData.cedula,
+          specialty: tecnicoData.specialty,
+          description: tecnicoData.descripcion,
+          experience_years: parseInt(tecnicoData.experiencia) || 0,
+        })
+        
+        console.log('Registro exitoso:', response)
+        alert('¡Registro exitoso! Ahora puedes iniciar sesión.')
+      } catch (error: any) {
+        console.error('Error en registro:', error)
+        alert(error.message || 'Error al registrar usuario')
+      }
     }
   }
 
@@ -154,6 +322,7 @@ function RegisterContent() {
                           id="cliente-nombre"
                           placeholder="Tu nombre completo"
                           className="pl-10"
+                          autoComplete="name"
                           value={clienteData.nombre}
                           onChange={(e) => setClienteData({ ...clienteData, nombre: e.target.value })}
                           required
@@ -170,6 +339,7 @@ function RegisterContent() {
                           type="email"
                           placeholder="tu@correo.com"
                           className="pl-10"
+                          autoComplete="email"
                           value={clienteData.email}
                           onChange={(e) => setClienteData({ ...clienteData, email: e.target.value })}
                           required
@@ -186,6 +356,7 @@ function RegisterContent() {
                           type="tel"
                           placeholder="+507 6000-0000"
                           className="pl-10"
+                          autoComplete="tel"
                           value={clienteData.telefono}
                           onChange={(e) => setClienteData({ ...clienteData, telefono: e.target.value })}
                           required
@@ -193,15 +364,44 @@ function RegisterContent() {
                       </div>
                     </div>
 
+                    {/* Campos de ubicación - Cliente */}
                     <div className="space-y-2">
-                      <Label htmlFor="cliente-zona">Zona</Label>
-                      <Select value={clienteData.zona} onValueChange={(v) => setClienteData({ ...clienteData, zona: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona tu zona" />
+                      <Label htmlFor="cliente-provincia">Provincia</Label>
+                      <Select value={clienteProvincia} onValueChange={(v) => { setClienteProvincia(v); setClienteDistrito(""); setClienteCorregimiento(""); setClienteData({ ...clienteData, provincia: v, distrito: "", corregimiento: "" }) }}>
+                        <SelectTrigger id="cliente-provincia">
+                          <SelectValue placeholder="Selecciona tu provincia" />
                         </SelectTrigger>
                         <SelectContent>
-                          {zonasPanama.map((zona) => (
-                            <SelectItem key={zona} value={zona}>{zona}</SelectItem>
+                          {ubicacionesPanama.provincias.map((provincia) => (
+                            <SelectItem key={provincia.id} value={provincia.id}>{provincia.nombre}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="cliente-distrito">Distrito</Label>
+                      <Select value={clienteDistrito} onValueChange={(v) => { setClienteDistrito(v); setClienteCorregimiento(""); setClienteData({ ...clienteData, distrito: v, corregimiento: "" }) }} disabled={!clienteProvincia}>
+                        <SelectTrigger id="cliente-distrito">
+                          <SelectValue placeholder="Selecciona tu distrito" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {distritosOptions.map((distrito: any) => (
+                            <SelectItem key={distrito.id} value={distrito.id}>{distrito.nombre}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="cliente-corregimiento">Corregimiento</Label>
+                      <Select value={clienteCorregimiento} onValueChange={(v) => { setClienteCorregimiento(v); setClienteData({ ...clienteData, corregimiento: v }) }} disabled={!clienteDistrito}>
+                        <SelectTrigger id="cliente-corregimiento">
+                          <SelectValue placeholder="Selecciona tu corregimiento" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {corregimientosOptions.map((corregimiento: any) => (
+                            <SelectItem key={corregimiento.id} value={corregimiento.id}>{corregimiento.nombre}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -216,6 +416,7 @@ function RegisterContent() {
                           type={showPassword ? "text" : "password"}
                           placeholder="Mínimo 8 caracteres"
                           className="pl-10 pr-10"
+                          autoComplete="new-password"
                           value={clienteData.password}
                           onChange={(e) => setClienteData({ ...clienteData, password: e.target.value })}
                           required
@@ -291,6 +492,7 @@ function RegisterContent() {
                               id="tecnico-nombre"
                               placeholder="Tu nombre completo"
                               className="pl-10"
+                              autoComplete="name"
                               value={tecnicoData.nombre}
                               onChange={(e) => setTecnicoData({ ...tecnicoData, nombre: e.target.value })}
                               required
@@ -307,6 +509,7 @@ function RegisterContent() {
                               type="email"
                               placeholder="tu@correo.com"
                               className="pl-10"
+                              autoComplete="email"
                               value={tecnicoData.email}
                               onChange={(e) => setTecnicoData({ ...tecnicoData, email: e.target.value })}
                               required
@@ -323,6 +526,7 @@ function RegisterContent() {
                               type="tel"
                               placeholder="+507 6000-0000"
                               className="pl-10"
+                              autoComplete="tel"
                               value={tecnicoData.telefono}
                               onChange={(e) => setTecnicoData({ ...tecnicoData, telefono: e.target.value })}
                               required
@@ -338,6 +542,7 @@ function RegisterContent() {
                               id="tecnico-cedula"
                               placeholder="8-888-8888"
                               className="pl-10"
+                              autoComplete="off"
                               value={tecnicoData.cedula}
                               onChange={(e) => setTecnicoData({ ...tecnicoData, cedula: e.target.value })}
                               required
@@ -357,6 +562,7 @@ function RegisterContent() {
                               type={showPassword ? "text" : "password"}
                               placeholder="Mínimo 8 caracteres"
                               className="pl-10 pr-10"
+                              autoComplete="new-password"
                               value={tecnicoData.password}
                               onChange={(e) => setTecnicoData({ ...tecnicoData, password: e.target.value })}
                               required
@@ -384,35 +590,84 @@ function RegisterContent() {
                           </p>
                         </div>
 
+                        {/* Campos de ubicación - Técnico */}
                         <div className="space-y-2">
-                          <Label htmlFor="tecnico-zonas">Zonas de cobertura</Label>
-                          <Select>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona las zonas donde trabajas" />
+                          <Label htmlFor="tecnico-provincia">Provincia</Label>
+                          <Select value={tecnicoProvincia} onValueChange={(v) => { setTecnicoProvincia(v); setTecnicoDistrito(""); setTecnicoCorregimiento(""); setTecnicoData({ ...tecnicoData, provincia: v, distrito: "", corregimiento: "" }) }}>
+                            <SelectTrigger id="tecnico-provincia">
+                              <SelectValue placeholder="Selecciona tu provincia" />
                             </SelectTrigger>
                             <SelectContent>
-                              {zonasPanama.map((zona) => (
-                                <SelectItem key={zona} value={zona}>{zona}</SelectItem>
+                              {ubicacionesPanama.provincias.map((provincia) => (
+                                <SelectItem key={provincia.id} value={provincia.id}>{provincia.nombre}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          <p className="text-xs text-muted-foreground">
-                            Puedes seleccionar múltiples zonas
-                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="tecnico-distrito">Distrito</Label>
+                          <Select value={tecnicoDistrito} onValueChange={(v) => { setTecnicoDistrito(v); setTecnicoCorregimiento(""); setTecnicoData({ ...tecnicoData, distrito: v, corregimiento: "" }) }} disabled={!tecnicoProvincia}>
+                            <SelectTrigger id="tecnico-distrito">
+                              <SelectValue placeholder="Selecciona tu distrito" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {tecnicoDistritosOptions.map((distrito: any) => (
+                                <SelectItem key={distrito.id} value={distrito.id}>{distrito.nombre}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="tecnico-corregimiento">Corregimiento</Label>
+                          <Select value={tecnicoCorregimiento} onValueChange={(v) => { setTecnicoCorregimiento(v); setTecnicoData({ ...tecnicoData, corregimiento: v }) }} disabled={!tecnicoDistrito}>
+                            <SelectTrigger id="tecnico-corregimiento">
+                              <SelectValue placeholder="Selecciona tu corregimiento" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {tecnicoCorregimientosOptions.map((corregimiento: any) => (
+                                <SelectItem key={corregimiento.id} value={corregimiento.id}>{corregimiento.nombre}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
 
                         <div className="space-y-2">
                           <Label htmlFor="tecnico-experiencia">Años de experiencia</Label>
                           <Select value={tecnicoData.experiencia} onValueChange={(v) => setTecnicoData({ ...tecnicoData, experiencia: v })}>
-                            <SelectTrigger>
+                            <SelectTrigger id="tecnico-experiencia">
                               <SelectValue placeholder="Selecciona" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="0-1">Menos de 1 año</SelectItem>
-                              <SelectItem value="1-3">1-3 años</SelectItem>
-                              <SelectItem value="3-5">3-5 años</SelectItem>
-                              <SelectItem value="5-10">5-10 años</SelectItem>
-                              <SelectItem value="10+">Más de 10 años</SelectItem>
+                              <SelectItem value="0">Menos de 1 año</SelectItem>
+                              <SelectItem value="1">1-3 años</SelectItem>
+                              <SelectItem value="3">3-5 años</SelectItem>
+                              <SelectItem value="5">5-10 años</SelectItem>
+                              <SelectItem value="10">Más de 10 años</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="tecnico-specialty">Especialidad principal</Label>
+                          <Select value={tecnicoData.specialty || ""} onValueChange={(v) => setTecnicoData({ ...tecnicoData, specialty: v })}>
+                            <SelectTrigger id="tecnico-specialty">
+                              <SelectValue placeholder="Selecciona tu especialidad" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Refrigeracion">Refrigeracion</SelectItem>
+                              {/* <SelectItem value="plomero">Plomero</SelectItem>
+                              <SelectItem value="aire-acondicionado">Aire Acondicionado</SelectItem>
+                              <SelectItem value="carpintero">Carpintero</SelectItem>
+                              <SelectItem value="pintor">Pintor</SelectItem>
+                              <SelectItem value="albañil">Albañil</SelectItem>
+                              <SelectItem value="soldador">Soldador</SelectItem>
+                              <SelectItem value="mecanico">Mecánico</SelectItem>
+                              <SelectItem value="cerrajero">Cerrajero</SelectItem>
+                              <SelectItem value="jardinero">Jardinero</SelectItem>
+                              <SelectItem value="limpieza">Limpieza Industrial</SelectItem>
+                              <SelectItem value="otro">Otro</SelectItem> */}
                             </SelectContent>
                           </Select>
                         </div>

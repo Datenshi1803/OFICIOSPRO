@@ -22,6 +22,18 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
+        'is_active',
+        'phone',
+        'provincia',
+        'distrito',
+        'corregimiento',
+        'cedula',
+        'specialty',
+        'description',
+        'experience_years',
+        'hourly_rate',
+        'google_id'
     ];
 
     /**
