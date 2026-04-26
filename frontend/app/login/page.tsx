@@ -2,25 +2,56 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { Wrench, Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Wrench, Eye, EyeOff, Mail, Lock, ArrowLeft, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { loginUser } from "@/lib/api"
 
 export default function LoginPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     remember: false,
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle login logic
-    console.log("Login attempt:", formData)
+    setError("")
+    setIsLoading(true)
+
+    try {
+      const response = await loginUser({
+        email: formData.email,
+        password: formData.password,
+      })
+
+      // Guardar token y usuario en localStorage
+      if (response.token) {
+        localStorage.setItem("token", response.token)
+        localStorage.setItem("user", JSON.stringify(response.user))
+      }
+
+      // Redireccionar según el rol del usuario
+      if (response.user.role === "technician") {
+        router.push("/dashboard/tecnico")
+      } else if (response.user.role === "admin") {
+        router.push("/admin")
+      } else {
+        router.push("/dashboard/cliente")
+      }
+    } catch (err: any) {
+      setError(err.message || "Error al iniciar sesión")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -77,6 +108,11 @@ export default function LoginPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {error && (
+                <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20">
+                  {error}
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Correo electrónico</Label>
@@ -87,6 +123,7 @@ export default function LoginPage() {
                       type="email"
                       placeholder="tu@correo.com"
                       className="pl-10"
+                      autoComplete="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       required
@@ -135,8 +172,15 @@ export default function LoginPage() {
                   </Label>
                 </div>
 
-                <Button type="submit" className="w-full">
-                  Iniciar Sesión
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Iniciando sesión...
+                    </>
+                  ) : (
+                    "Iniciar Sesión"
+                  )}
                 </Button>
 
                 <div className="relative">

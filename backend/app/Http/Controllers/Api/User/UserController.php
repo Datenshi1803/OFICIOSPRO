@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -12,15 +14,14 @@ class UserController extends Controller
      */
     public function index()
     {
-        //
-    }
+        $users = User::select(['id', 'name', 'email', 'role', 'is_active', 'created_at'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
+        return response()->json([
+            'success' => true,
+            'data' => $users
+        ]);
     }
 
     /**
@@ -28,7 +29,12 @@ class UserController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $user = User::findOrFail($id);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $user
+        ]);
     }
 
     /**
@@ -45,5 +51,36 @@ class UserController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    /**
+     * Toggle user active status (Admin only)
+     */
+    public function toggleActive(string $id)
+    {
+        $user = User::findOrFail($id);
+        
+        // No permitir desactivarse a sí mismo
+        if ($user->id === Auth::id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No puede desactivar su propia cuenta'
+            ], 422);
+        }
+
+        $user->is_active = !$user->is_active;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => $user->is_active 
+                ? 'Usuario activado correctamente' 
+                : 'Usuario desactivado correctamente',
+            'data' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'is_active' => $user->is_active
+            ]
+        ]);
     }
 }
