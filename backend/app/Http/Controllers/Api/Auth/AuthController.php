@@ -51,6 +51,8 @@ class AuthController extends Controller
             'role' => 'required|in:client,technician',
 
             'phone' => 'nullable',
+            'avatar_url' => 'nullable|url|max:500',
+            'bio' => 'nullable|string|max:500',
 
             // SOLO técnicos
             'cedula' => 'required_if:role,technician',
@@ -66,6 +68,8 @@ class AuthController extends Controller
             'role' => $request->role,
             'is_active' => true, // Por defecto activo
             'phone' => $request->phone,
+            'avatar_url' => $request->avatar_url,
+            'bio' => $request->bio,
 
             'provincia' => $request->provincia,
             'distrito' => $request->distrito,
@@ -119,6 +123,7 @@ class AuthController extends Controller
                 'role' => 'client', // siempre cliente por defecto
                 'phone' => null,
                 'google_id' => $google_id,
+                'avatar_url' => $payload['picture'] ?? null,
                 'email_verified_at' => now()
             ]);
         }
@@ -144,7 +149,10 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'is_active' => $user->is_active,
+                'is_verified' => $user->is_verified,
                 'phone' => $user->phone,
+                'avatar_url' => $user->avatar_url,
+                'bio' => $user->bio,
                 'provincia' => $user->provincia,
                 'distrito' => $user->distrito,
                 'corregimiento' => $user->corregimiento,
@@ -168,6 +176,8 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:150',
             'phone' => 'sometimes|string|max:20',
+            'avatar_url' => 'sometimes|url|max:500',
+            'bio' => 'sometimes|string|max:500',
             'provincia' => 'sometimes|string|max:100',
             'distrito' => 'sometimes|string|max:100',
             'corregimiento' => 'sometimes|string|max:100',
@@ -180,10 +190,12 @@ class AuthController extends Controller
             $request->validate([
                 'specialty' => 'sometimes|string|max:100',
                 'experience_years' => 'sometimes|integer|min:0',
+                'cedula' => 'sometimes|string|max:20',
             ]);
             
             $validated['specialty'] = $request->specialty;
             $validated['experience_years'] = $request->experience_years;
+            $validated['cedula'] = $request->cedula;
         }
 
         $user->update($validated);

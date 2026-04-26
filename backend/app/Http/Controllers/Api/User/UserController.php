@@ -14,7 +14,7 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::select(['id', 'name', 'email', 'role', 'is_active', 'created_at'])
+        $users = User::select(['id', 'name', 'email', 'role', 'is_active', 'phone', 'avatar_url', 'is_verified', 'created_at'])
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
@@ -56,6 +56,8 @@ class UserController extends Controller
             'description' => 'sometimes|string|max:1000',
             'experience_years' => 'sometimes|integer|min:0',
             'hourly_rate' => 'sometimes|numeric|min:0',
+            'avatar_url' => 'sometimes|url|max:500',
+            'bio' => 'sometimes|string|max:500',
         ]);
 
         $user->update($validated);
@@ -116,7 +118,10 @@ class UserController extends Controller
             'data' => [
                 'id' => $user->id,
                 'name' => $user->name,
-                'is_active' => $user->is_active
+                'email' => $user->email,
+                'avatar_url' => $user->avatar_url,
+                'is_active' => $user->is_active,
+                'is_verified' => $user->is_verified,
             ]
         ]);
     }
