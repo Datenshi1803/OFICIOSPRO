@@ -42,7 +42,29 @@ class UserController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $user = User::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:users,email,' . $id,
+            'phone' => 'sometimes|string|max:20',
+            'provincia' => 'sometimes|string|max:100',
+            'distrito' => 'sometimes|string|max:100',
+            'corregimiento' => 'sometimes|string|max:100',
+            'cedula' => 'sometimes|string|max:20',
+            'specialty' => 'sometimes|string|max:255',
+            'description' => 'sometimes|string|max:1000',
+            'experience_years' => 'sometimes|integer|min:0',
+            'hourly_rate' => 'sometimes|numeric|min:0',
+        ]);
+
+        $user->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Usuario actualizado correctamente',
+            'data' => $user
+        ]);
     }
 
     /**
@@ -50,7 +72,22 @@ class UserController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $user = User::findOrFail($id);
+
+        // No permitir eliminarse a sí mismo
+        if ($user->id === Auth::id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No puede eliminar su propia cuenta'
+            ], 422);
+        }
+
+        $user->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Usuario eliminado correctamente'
+        ]);
     }
 
     /**

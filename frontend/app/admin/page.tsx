@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Wrench,
   Search,
@@ -31,6 +31,7 @@ import {
   Filter,
   Download,
   RefreshCw,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -54,65 +55,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { getUsers, toggleUserActive, deleteUser, UserData } from "@/lib/api"
 
 const stats = [
   { label: "Usuarios Totales", value: "1,247", change: "+12%", trend: "up", icon: Users },
   { label: "Trabajos este mes", value: "342", change: "+8%", trend: "up", icon: FileText },
   { label: "Comisiones", value: "$4,850", change: "+23%", trend: "up", icon: DollarSign },
   { label: "Disputas activas", value: "3", change: "-2", trend: "down", icon: AlertTriangle },
-]
-
-const recentUsers = [
-  {
-    id: "USR-001",
-    nombre: "María González",
-    email: "maria.g@email.com",
-    tipo: "cliente",
-    estado: "activo",
-    verificado: true,
-    fechaRegistro: "2025-04-15",
-    trabajos: 5,
-  },
-  {
-    id: "USR-002",
-    nombre: "Carlos Mendoza",
-    email: "carlos.m@email.com",
-    tipo: "tecnico",
-    estado: "activo",
-    verificado: true,
-    fechaRegistro: "2025-04-14",
-    trabajos: 127,
-  },
-  {
-    id: "USR-003",
-    nombre: "Ana Pérez",
-    email: "ana.p@email.com",
-    tipo: "tecnico",
-    estado: "pendiente",
-    verificado: false,
-    fechaRegistro: "2025-04-15",
-    trabajos: 0,
-  },
-  {
-    id: "USR-004",
-    nombre: "Roberto Santos",
-    email: "roberto.s@email.com",
-    tipo: "tecnico",
-    estado: "activo",
-    verificado: true,
-    fechaRegistro: "2025-04-13",
-    trabajos: 89,
-  },
-  {
-    id: "USR-005",
-    nombre: "Luis Herrera",
-    email: "luis.h@email.com",
-    tipo: "cliente",
-    estado: "suspendido",
-    verificado: true,
-    fechaRegistro: "2025-04-10",
-    trabajos: 2,
-  },
 ]
 
 const recentJobs = [
@@ -185,6 +134,49 @@ const disputas = [
 export default function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
+  const [users, setUsers] = useState<UserData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadUsers()
+  }, [])
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await getUsers()
+      if (response.success && response.data) {
+        setUsers(response.data.data || response.data)
+      }
+    } catch (err) {
+      console.error('Error loading users:', err)
+      setError('Error al cargar usuarios')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleToggleActive = async (userId: string) => {
+    try {
+      await toggleUserActive(userId)
+      loadUsers()
+    } catch (err) {
+      console.error('Error toggling user:', err)
+    }
+  }
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('¿Está seguro de que desea eliminar este usuario?')) return
+    
+    try {
+      await deleteUser(userId)
+      loadUsers()
+    } catch (err) {
+      console.error('Error deleting user:', err)
+    }
+  }
 
   const navigation = [
     { name: "Dashboard", href: "/admin", icon: Home, current: true },
@@ -503,88 +495,115 @@ export default function AdminDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Usuario</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead>Verificado</TableHead>
-                        <TableHead>Trabajos</TableHead>
-                        <TableHead>Registro</TableHead>
-                        <TableHead className="text-right">Acciones</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {recentUsers.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback>{user.nombre.charAt(0)}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="font-medium">{user.nombre}</p>
-                                <p className="text-xs text-muted-foreground">{user.email}</p>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="capitalize">{user.tipo}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                user.estado === "activo" ? "default" :
-                                user.estado === "pendiente" ? "secondary" : "destructive"
-                              }
-                            >
-                              {user.estado}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {user.verificado ? (
-                              <CheckCircle2 className="h-5 w-5 text-accent" />
-                            ) : (
-                              <Clock className="h-5 w-5 text-warning" />
-                            )}
-                          </TableCell>
-                          <TableCell>{user.trabajos}</TableCell>
-                          <TableCell>{user.fechaRegistro}</TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  Ver perfil
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Mail className="mr-2 h-4 w-4" />
-                                  Enviar email
-                                </DropdownMenuItem>
-                                {!user.verificado && user.tipo === "tecnico" && (
-                                  <DropdownMenuItem>
-                                    <Shield className="mr-2 h-4 w-4" />
-                                    Verificar cédula
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive">
-                                  <Ban className="mr-2 h-4 w-4" />
-                                  Suspender cuenta
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
+                  {loading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : error ? (
+                    <div className="flex flex-col items-center justify-center py-8 gap-4">
+                      <p className="text-destructive">{error}</p>
+                      <Button variant="outline" onClick={loadUsers}>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Reintentar
+                      </Button>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Usuario</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead>Teléfono</TableHead>
+                          <TableHead>Registro</TableHead>
+                          <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {users.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                              No hay usuarios registrados
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          users.map((user) => (
+                            <TableRow key={user.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="font-medium">{user.name}</p>
+                                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="capitalize">{user.role}</Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={user.is_active ? "default" : "destructive"}
+                                >
+                                  {user.is_active ? "Activo" : "Inactivo"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{user.phone || "-"}</TableCell>
+                              <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                              <TableCell className="text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem>
+                                      <Eye className="mr-2 h-4 w-4" />
+                                      Ver perfil
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                      <Mail className="mr-2 h-4 w-4" />
+                                      Enviar email
+                                    </DropdownMenuItem>
+                                    {user.role === "technician" && (
+                                      <DropdownMenuItem>
+                                        <Shield className="mr-2 h-4 w-4" />
+                                        Verificar cédula
+                                      </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => handleToggleActive(user.id)}>
+                                      {user.is_active ? (
+                                        <>
+                                          <Ban className="mr-2 h-4 w-4" />
+                                          Desactivar cuenta
+                                        </>
+                                      ) : (
+                                        <>
+                                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                                          Activar cuenta
+                                        </>
+                                      )}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      className="text-destructive"
+                                      onClick={() => handleDeleteUser(user.id)}
+                                    >
+                                      <Ban className="mr-2 h-4 w-4" />
+                                      Eliminar usuario
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

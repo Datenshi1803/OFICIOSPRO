@@ -92,6 +92,9 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::get('/usuarios', [UserController::class, 'index']);
+        Route::get('/usuarios/{user}', [UserController::class, 'show']);
+        Route::put('/usuarios/{user}', [UserController::class, 'update']);
+        Route::delete('/usuarios/{user}', [UserController::class, 'destroy']);
         Route::get('/usuarios/{user}/toggle-active', [UserController::class, 'toggleActive']);
         Route::get('/estadisticas', function () {
             return response()->json([
@@ -136,6 +139,5 @@ Route::middleware('auth')->group(function () {
 // ============================================================
 // RUTAS PÚBLICAS DE RECURSOS
 // ============================================================
-Route::apiResource('users', UserController::class);
 Route::apiResource('jobs', JobController::class);
 Route::apiResource('bids', BidController::class);
