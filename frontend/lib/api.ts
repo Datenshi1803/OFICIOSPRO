@@ -213,3 +213,184 @@ export async function toggleUserActive(id: string): Promise<{ success: boolean; 
 
   return response.json();
 }
+
+// ============================================================
+// BIDS (Cotizaciones)
+// ============================================================
+
+export interface BidData {
+  id: number
+  job_id: number
+  technician_id: number
+  amount: string
+  estimated_days: number
+  proposal: string
+  availability_date: string
+  is_paid_bid: boolean
+  status: 'pending' | 'accepted' | 'rejected'
+  created_at: string
+  updated_at: string
+  technician?: {
+    id: number
+    name: string
+    avatar_url: string | null
+    reputation_score: string
+    jobs_completed: number
+    is_verified: boolean
+    reputation_label: string
+  }
+}
+
+export interface StoreBidData {
+  job_id: number
+  amount: number
+  estimated_days: number
+  proposal: string
+  availability_date: string
+}
+
+export interface JobData {
+  id: number
+  ulid: string
+  code: string
+  client_id: number
+  category_id: number
+  title: string
+  description: string
+  zone: string
+  urgency: 'normal' | 'urgent' | 'emergency'
+  budget: string | null
+  status: string
+  created_at: string
+  category?: { id: number; name: string }
+}
+
+// ── Técnico: ver trabajos disponibles ────────────────────────────────────────
+export async function getAvailableJobs(): Promise<{ success: boolean; data: JobData[] }> {
+  const token = localStorage.getItem('token')
+
+  const response = await fetch(`${API_URL}/technician/trabajos-disponibles`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || 'Error al obtener trabajos')
+  }
+
+  return response.json()
+}
+
+// ── Técnico: enviar cotización ────────────────────────────────────────────────
+export async function storeBid(data: StoreBidData): Promise<{ success: boolean; message: string; data: BidData }> {
+  const token = localStorage.getItem('token')
+
+  const response = await fetch(`${API_URL}/technician/cotizaciones`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || 'Error al enviar cotización')
+  }
+
+  return response.json()
+}
+
+// ── Técnico: ver mis cotizaciones ─────────────────────────────────────────────
+export async function getMyBids(): Promise<{ success: boolean; data: BidData[] }> {
+  const token = localStorage.getItem('token')
+
+  const response = await fetch(`${API_URL}/technician/mis-cotizaciones`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || 'Error al obtener cotizaciones')
+  }
+
+  return response.json()
+}
+
+// ── Técnico: editar cotización ────────────────────────────────────────────────
+export async function updateBid(
+  bidId: number,
+  data: Partial<StoreBidData>
+): Promise<{ success: boolean; message: string; data: BidData }> {
+  const token = localStorage.getItem('token')
+
+  const response = await fetch(`${API_URL}/technician/cotizaciones/${bidId}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || 'Error al actualizar cotización')
+  }
+
+  return response.json()
+}
+
+// ── Cliente: ver cotizaciones de un trabajo ───────────────────────────────────
+export async function getJobBids(
+  jobId: number,
+  sort: 'reputation' | 'price' | 'date' = 'reputation'
+): Promise<{ success: boolean; data: BidData[] }> {
+  const token = localStorage.getItem('token')
+
+  const response = await fetch(`${API_URL}/client/trabajos/${jobId}/cotizaciones?sort=${sort}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || 'Error al obtener cotizaciones')
+  }
+
+  return response.json()
+}
+
+// ── Cliente: ver sus trabajos ─────────────────────────────────────────────────
+export async function getClientJobs(): Promise<{ success: boolean; data: JobData[] }> {
+  const token = localStorage.getItem('token')
+
+  const response = await fetch(`${API_URL}/client/trabajos`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || 'Error al obtener trabajos')
+  }
+
+  return response.json()
+}

@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
+import { useParams } from "next/navigation"
 import {
   ArrowLeft,
   Clock,
@@ -20,6 +21,7 @@ import {
   Mail,
   User,
   Wrench,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -34,135 +36,69 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { getJobBids, BidData } from "@/lib/api"
 
-const trabajo = {
-  id: "OFP-2025-00042",
-  titulo: "Mantenimiento de aire acondicionado split",
-  descripcion: "Necesito mantenimiento preventivo para mi aire acondicionado split de 12,000 BTU marca LG. El equipo tiene aproximadamente 2 años de uso y nunca le han hecho mantenimiento. Está instalado en la sala del apartamento.",
-  categoria: "Mantenimiento preventivo",
-  estado: "PUBLICADO",
-  zona: "Costa del Este",
-  direccion: "PH Ocean View, Torre A, Piso 15",
-  urgencia: "normal",
-  presupuesto: 150,
-  fechaPublicacion: "2025-04-15",
-  imagenes: [
-    "/placeholder.svg?height=300&width=400",
-    "/placeholder.svg?height=300&width=400",
-  ],
-}
-
-const cotizaciones = [
-  {
-    id: "COT-001",
-    tecnico: {
-      id: "TEC-001",
-      nombre: "Carlos Mendoza",
-      avatar: "",
-      rating: 4.9,
-      trabajosCompletados: 127,
-      verificado: true,
-      especialidad: "Mantenimiento y reparación",
-      experiencia: "8 años",
-    },
-    monto: 85,
-    tiempoEstimado: "2-3 horas",
-    disponibilidad: "2025-04-17",
-    propuesta: "Realizo el mantenimiento completo incluyendo: limpieza de filtros, revisión de gas refrigerante, limpieza de serpentines, revisión eléctrica y prueba de funcionamiento. Incluyo materiales de limpieza.",
-    fechaEnvio: "2025-04-15T10:30:00",
-  },
-  {
-    id: "COT-002",
-    tecnico: {
-      id: "TEC-002",
-      nombre: "Roberto Santos",
-      avatar: "",
-      rating: 4.7,
-      trabajosCompletados: 89,
-      verificado: true,
-      especialidad: "Instalación y mantenimiento",
-      experiencia: "5 años",
-    },
-    monto: 95,
-    tiempoEstimado: "1-2 horas",
-    disponibilidad: "2025-04-16",
-    propuesta: "Ofrezco servicio de mantenimiento preventivo con garantía de 30 días. Incluye revisión completa del sistema, limpieza profunda y certificado de mantenimiento.",
-    fechaEnvio: "2025-04-15T11:45:00",
-  },
-  {
-    id: "COT-003",
-    tecnico: {
-      id: "TEC-003",
-      nombre: "Miguel Arias",
-      avatar: "",
-      rating: 4.8,
-      trabajosCompletados: 203,
-      verificado: true,
-      especialidad: "Todo tipo de servicios A/C",
-      experiencia: "12 años",
-    },
-    monto: 75,
-    tiempoEstimado: "3-4 horas",
-    disponibilidad: "2025-04-18",
-    propuesta: "Mantenimiento completo a precio competitivo. Limpieza de unidad interior y exterior, revisión de presiones, verificación de amperaje. Experiencia en todas las marcas.",
-    fechaEnvio: "2025-04-15T14:20:00",
-  },
-  {
-    id: "COT-004",
-    tecnico: {
-      id: "TEC-004",
-      nombre: "José Pérez",
-      avatar: "",
-      rating: 4.6,
-      trabajosCompletados: 45,
-      verificado: true,
-      especialidad: "Mantenimiento residencial",
-      experiencia: "3 años",
-    },
-    monto: 70,
-    tiempoEstimado: "2 horas",
-    disponibilidad: "2025-04-16",
-    propuesta: "Servicio de mantenimiento básico con atención personalizada. Nuevo en la plataforma pero con experiencia comprobada.",
-    fechaEnvio: "2025-04-15T16:00:00",
-  },
-]
-
-const estadoConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
-  PUBLICADO: { label: "Publicado", variant: "default", icon: Clock },
-  EN_PROGRESO: { label: "En Progreso", variant: "secondary", icon: AlertCircle },
-  COMPLETADO: { label: "Completado", variant: "outline", icon: CheckCircle2 },
+const estadoConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  published:      { label: "Publicado",   variant: "default"   },
+  in_progress:    { label: "En Progreso", variant: "secondary" },
+  completed:      { label: "Completado",  variant: "outline"   },
+  cancelled:      { label: "Cancelado",   variant: "destructive" },
 }
 
 const urgenciaConfig: Record<string, { label: string; className: string }> = {
-  normal: { label: "Normal", className: "bg-muted text-muted-foreground" },
-  urgente: { label: "Urgente", className: "bg-warning/20 text-warning-foreground" },
-  emergencia: { label: "Emergencia", className: "bg-destructive/20 text-destructive" },
+  normal:    { label: "Normal",     className: "bg-muted text-muted-foreground"         },
+  urgent:    { label: "Urgente",    className: "bg-warning/20 text-warning-foreground"  },
+  emergency: { label: "Emergencia", className: "bg-destructive/20 text-destructive"     },
 }
 
 export default function TrabajoDetallePage() {
-  const [sortBy, setSortBy] = useState<"rating" | "precio" | "fecha">("rating")
-  const [expandedCotizacion, setExpandedCotizacion] = useState<string | null>(null)
+  const params = useParams()
+  const jobId = Number(params.id)
+
+  const [bids, setBids]                         = useState<BidData[]>([])
+  const [loading, setLoading]                   = useState(true)
+  const [error, setError]                       = useState<string | null>(null)
+  const [sortBy, setSortBy]                     = useState<"reputation" | "price" | "date">("reputation")
+  const [expandedBid, setExpandedBid]           = useState<number | null>(null)
   const [showAcceptDialog, setShowAcceptDialog] = useState(false)
-  const [selectedCotizacion, setSelectedCotizacion] = useState<typeof cotizaciones[0] | null>(null)
+  const [selectedBid, setSelectedBid]           = useState<BidData | null>(null)
+  const [accepting, setAccepting]               = useState(false)
 
-  const estado = estadoConfig[trabajo.estado]
-  const urgencia = urgenciaConfig[trabajo.urgencia]
+  // ── Cargar cotizaciones ─────────────────────────────────────────────────────
+  useEffect(() => {
+    async function loadBids() {
+      setLoading(true)
+      setError(null)
+      try {
+        const res = await getJobBids(jobId, sortBy)
+        setBids(res.data)
+      } catch (err: any) {
+        setError(err.message || "Error al cargar cotizaciones")
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadBids()
+  }, [jobId, sortBy])
 
-  const sortedCotizaciones = [...cotizaciones].sort((a, b) => {
-    if (sortBy === "rating") return b.tecnico.rating - a.tecnico.rating
-    if (sortBy === "precio") return a.monto - b.monto
-    return new Date(b.fechaEnvio).getTime() - new Date(a.fechaEnvio).getTime()
-  })
-
-  const handleAcceptCotizacion = (cotizacion: typeof cotizaciones[0]) => {
-    setSelectedCotizacion(cotizacion)
+  function handleAccept(bid: BidData) {
+    setSelectedBid(bid)
     setShowAcceptDialog(true)
   }
 
-  const confirmAccept = () => {
-    console.log("Cotización aceptada:", selectedCotizacion)
+  async function confirmAccept() {
+    // Por implementar: endpoint de aceptar cotización
+    setAccepting(true)
+    await new Promise(r => setTimeout(r, 1000)) // placeholder
+    setAccepting(false)
     setShowAcceptDialog(false)
   }
+
+  // Stats de cotizaciones
+  const amounts      = bids.map(b => parseFloat(b.amount))
+  const minAmount    = amounts.length ? Math.min(...amounts) : 0
+  const maxAmount    = amounts.length ? Math.max(...amounts) : 0
+  const avgAmount    = amounts.length ? amounts.reduce((a, b) => a + b, 0) / amounts.length : 0
 
   return (
     <div className="min-h-screen bg-background">
@@ -176,7 +112,7 @@ export default function TrabajoDetallePage() {
           </Button>
           <div className="flex-1">
             <h1 className="text-lg font-semibold text-foreground">Detalle del Trabajo</h1>
-            <p className="font-mono text-xs text-muted-foreground">{trabajo.id}</p>
+            <p className="font-mono text-xs text-muted-foreground">#{jobId}</p>
           </div>
           <Link href="/" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
@@ -187,59 +123,16 @@ export default function TrabajoDetallePage() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6">
+        {error && (
+          <div className="mb-6 rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            {error}
+          </div>
+        )}
+
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main Content */}
+          {/* ── Columna principal ── */}
           <div className="space-y-6 lg:col-span-2">
-            {/* Job Info Card */}
-            <Card>
-              <CardHeader>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={estado.variant} className="gap-1">
-                    <estado.icon className="h-3 w-3" />
-                    {estado.label}
-                  </Badge>
-                  <span className={`rounded-full px-2 py-0.5 text-xs ${urgencia.className}`}>
-                    {urgencia.label}
-                  </span>
-                </div>
-                <CardTitle className="text-xl">{trabajo.titulo}</CardTitle>
-                <CardDescription>{trabajo.categoria}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-foreground">{trabajo.descripcion}</p>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Zona:</span>
-                    <span className="font-medium text-foreground">{trabajo.zona}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Publicado:</span>
-                    <span className="font-medium text-foreground">{trabajo.fechaPublicacion}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Presupuesto:</span>
-                    <span className="font-medium text-foreground">${trabajo.presupuesto}</span>
-                  </div>
-                </div>
-
-                {trabajo.imagenes.length > 0 && (
-                  <div>
-                    <p className="mb-2 text-sm font-medium text-foreground">Imágenes adjuntas</p>
-                    <div className="flex gap-2">
-                      {trabajo.imagenes.map((img, index) => (
-                        <div key={index} className="h-20 w-20 overflow-hidden rounded-lg border border-border">
-                          <img src={img} alt={`Imagen ${index + 1}`} className="h-full w-full object-cover" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
 
             {/* Cotizaciones */}
             <Card>
@@ -247,96 +140,127 @@ export default function TrabajoDetallePage() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <CardTitle>Cotizaciones recibidas</CardTitle>
-                    <CardDescription>{cotizaciones.length} técnicos han enviado propuestas</CardDescription>
+                    <CardDescription>
+                      {loading ? "Cargando..." : `${bids.length} técnico${bids.length !== 1 ? "s" : ""} han enviado propuestas`}
+                    </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Ordenar por:</span>
                     <select
                       value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as "rating" | "precio" | "fecha")}
+                      onChange={(e) => setSortBy(e.target.value as "reputation" | "price" | "date")}
                       className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                     >
-                      <option value="rating">Mejor valorado</option>
-                      <option value="precio">Menor precio</option>
-                      <option value="fecha">Más reciente</option>
+                      <option value="reputation">Mejor valorado</option>
+                      <option value="price">Menor precio</option>
+                      <option value="date">Más reciente</option>
                     </select>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {sortedCotizaciones.map((cotizacion, index) => {
-                  const isExpanded = expandedCotizacion === cotizacion.id
-                  const isBestPrice = cotizacion.monto === Math.min(...cotizaciones.map((c) => c.monto))
-                  const isBestRating = cotizacion.tecnico.rating === Math.max(...cotizaciones.map((c) => c.tecnico.rating))
+
+                {/* Loading */}
+                {loading && (
+                  <div className="flex items-center justify-center py-16">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+
+                {/* Sin cotizaciones */}
+                {!loading && bids.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                      <MessageSquare className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="mb-2 text-lg font-medium text-foreground">Aún no hay cotizaciones</h3>
+                    <p className="text-sm text-muted-foreground">Los técnicos disponibles serán notificados.</p>
+                  </div>
+                )}
+
+                {/* Lista de cotizaciones */}
+                {!loading && bids.map((bid, index) => {
+                  const isExpanded    = expandedBid === bid.id
+                  const isBestPrice   = parseFloat(bid.amount) === minAmount && amounts.length > 1
+                  const isBestRating  = bid.technician && parseFloat(bid.technician.reputation_score) === Math.max(...bids.map(b => parseFloat(b.technician?.reputation_score || "0"))) && bids.length > 1
+                  const isNew         = bid.technician?.reputation_label === "Nuevo"
 
                   return (
                     <div
-                      key={cotizacion.id}
+                      key={bid.id}
                       className={`rounded-lg border bg-card transition-all ${
                         index === 0 ? "border-primary shadow-sm" : "border-border"
                       }`}
                     >
                       <div className="p-4">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                          {/* Technician Info */}
+
+                          {/* Info técnico */}
                           <div className="flex gap-3">
-                            <Avatar className="h-12 w-12">
-                              <AvatarImage src={cotizacion.tecnico.avatar} />
-                              <AvatarFallback>{cotizacion.tecnico.nombre.charAt(0)}</AvatarFallback>
-                            </Avatar>
+                            <div className="relative">
+                              <Avatar className="h-12 w-12">
+                                <AvatarImage src={bid.technician?.avatar_url || ""} />
+                                <AvatarFallback>{bid.technician?.name?.charAt(0) || "T"}</AvatarFallback>
+                              </Avatar>
+                              {bid.technician?.is_verified && (
+                                <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary border-2 border-background">
+                                  <Shield className="h-2.5 w-2.5 text-primary-foreground" />
+                                </span>
+                              )}
+                            </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className="font-medium text-foreground">{cotizacion.tecnico.nombre}</span>
-                                {cotizacion.tecnico.verificado && (
-                                  <Shield className="h-4 w-4 text-primary" />
-                                )}
+                                <span className="font-medium text-foreground">{bid.technician?.name || "Técnico"}</span>
                               </div>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <Star className="h-4 w-4 fill-warning text-warning" />
-                                <span>{cotizacion.tecnico.rating}</span>
-                                <span>·</span>
-                                <span>{cotizacion.tecnico.trabajosCompletados} trabajos</span>
+                                <span>{isNew ? "Nuevo" : bid.technician?.reputation_label}</span>
+                                {!isNew && (
+                                  <>
+                                    <span>·</span>
+                                    <span>{bid.technician?.jobs_completed} trabajos</span>
+                                  </>
+                                )}
                               </div>
-                              <p className="text-xs text-muted-foreground">{cotizacion.tecnico.especialidad}</p>
                             </div>
                           </div>
 
-                          {/* Price & Badges */}
+                          {/* Precio y badges */}
                           <div className="flex items-start gap-4">
                             <div className="flex flex-wrap gap-1">
                               {isBestPrice && (
-                                <Badge variant="outline" className="border-accent text-accent">
+                                <Badge variant="outline" className="border-accent text-accent text-xs">
                                   Mejor precio
                                 </Badge>
                               )}
-                              {isBestRating && (
-                                <Badge variant="outline" className="border-warning text-warning">
+                              {isBestRating && !isNew && (
+                                <Badge variant="outline" className="border-warning text-warning text-xs">
                                   Mejor valorado
                                 </Badge>
                               )}
                             </div>
                             <div className="text-right">
-                              <p className="text-2xl font-bold text-foreground">${cotizacion.monto}</p>
-                              <p className="text-xs text-muted-foreground">{cotizacion.tiempoEstimado}</p>
+                              <p className="text-2xl font-bold text-foreground">${bid.amount}</p>
+                              <p className="text-xs text-muted-foreground">{bid.estimated_days} día{bid.estimated_days !== 1 ? "s" : ""}</p>
                             </div>
                           </div>
                         </div>
 
-                        {/* Quick Info */}
+                        {/* Info rápida */}
                         <div className="mt-4 flex flex-wrap gap-4 text-sm">
                           <div className="flex items-center gap-1 text-muted-foreground">
                             <Calendar className="h-4 w-4" />
-                            Disponible: {cotizacion.disponibilidad}
+                            Disponible: {bid.availability_date.split("T")[0]}
                           </div>
                           <div className="flex items-center gap-1 text-muted-foreground">
                             <Clock className="h-4 w-4" />
-                            {cotizacion.tiempoEstimado}
+                            {bid.estimated_days} día{bid.estimated_days !== 1 ? "s" : ""} estimados
                           </div>
                         </div>
 
-                        {/* Expandable Proposal */}
+                        {/* Propuesta expandible */}
                         <button
-                          onClick={() => setExpandedCotizacion(isExpanded ? null : cotizacion.id)}
+                          onClick={() => setExpandedBid(isExpanded ? null : bid.id)}
                           className="mt-4 flex w-full items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
                         >
                           <span>Ver propuesta completa</span>
@@ -345,18 +269,19 @@ export default function TrabajoDetallePage() {
 
                         {isExpanded && (
                           <div className="mt-3 rounded-lg bg-muted/50 p-4">
-                            <p className="text-sm text-foreground">{cotizacion.propuesta}</p>
+                            <p className="text-sm text-foreground">{bid.proposal}</p>
                           </div>
                         )}
 
-                        {/* Actions */}
+                        {/* Acciones */}
                         <div className="mt-4 flex gap-2">
-                          <Button variant="outline" size="sm" className="flex-1 gap-1">
-                            <MessageSquare className="h-4 w-4" />
-                            Mensaje
-                          </Button>
-                          <Button size="sm" className="flex-1" onClick={() => handleAcceptCotizacion(cotizacion)}>
-                            Aceptar Cotización
+                          <Button
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleAccept(bid)}
+                            disabled={bid.status !== "pending"}
+                          >
+                            {bid.status === "accepted" ? "✓ Aceptada" : "Aceptar Cotización"}
                           </Button>
                         </div>
                       </div>
@@ -367,9 +292,8 @@ export default function TrabajoDetallePage() {
             </Card>
           </div>
 
-          {/* Sidebar */}
+          {/* ── Sidebar ── */}
           <div className="space-y-6">
-            {/* Summary Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Resumen de cotizaciones</CardTitle>
@@ -377,49 +301,28 @@ export default function TrabajoDetallePage() {
               <CardContent className="space-y-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Total recibidas</span>
-                  <span className="font-medium text-foreground">{cotizaciones.length}</span>
+                  <span className="font-medium text-foreground">{bids.length}</span>
                 </div>
-                <Separator />
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Precio más bajo</span>
-                  <span className="font-medium text-accent">${Math.min(...cotizaciones.map((c) => c.monto))}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Precio más alto</span>
-                  <span className="font-medium text-foreground">${Math.max(...cotizaciones.map((c) => c.monto))}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Promedio</span>
-                  <span className="font-medium text-foreground">
-                    ${Math.round(cotizaciones.reduce((a, b) => a + b.monto, 0) / cotizaciones.length)}
-                  </span>
-                </div>
-                <Separator />
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tu presupuesto</span>
-                  <span className="font-medium text-foreground">${trabajo.presupuesto}</span>
-                </div>
+                {bids.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Precio más bajo</span>
+                      <span className="font-medium text-accent">${minAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Precio más alto</span>
+                      <span className="font-medium text-foreground">${maxAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Promedio</span>
+                      <span className="font-medium text-foreground">${avgAmount.toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
-            {/* Actions Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Acciones</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start gap-2">
-                  <Clock className="h-4 w-4" />
-                  Cerrar cotizaciones
-                </Button>
-                <Button variant="outline" className="w-full justify-start gap-2 text-destructive hover:text-destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  Cancelar trabajo
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Help Card */}
             <Card className="bg-primary/5">
               <CardContent className="p-4">
                 <h4 className="mb-2 font-medium text-foreground">¿Necesitas ayuda?</h4>
@@ -435,7 +338,7 @@ export default function TrabajoDetallePage() {
         </div>
       </main>
 
-      {/* Accept Cotizacion Dialog */}
+      {/* ── Dialog: Confirmar aceptar ── */}
       <Dialog open={showAcceptDialog} onOpenChange={setShowAcceptDialog}>
         <DialogContent>
           <DialogHeader>
@@ -445,17 +348,17 @@ export default function TrabajoDetallePage() {
             </DialogDescription>
           </DialogHeader>
 
-          {selectedCotizacion && (
+          {selectedBid && (
             <div className="space-y-4 py-4">
               <div className="flex items-center gap-3 rounded-lg bg-muted p-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback>{selectedCotizacion.tecnico.nombre.charAt(0)}</AvatarFallback>
+                  <AvatarFallback>{selectedBid.technician?.name?.charAt(0) || "T"}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium text-foreground">{selectedCotizacion.tecnico.nombre}</p>
+                  <p className="font-medium text-foreground">{selectedBid.technician?.name}</p>
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <Star className="h-3 w-3 fill-warning text-warning" />
-                    {selectedCotizacion.tecnico.rating} · {selectedCotizacion.tecnico.trabajosCompletados} trabajos
+                    {selectedBid.technician?.reputation_label} · {selectedBid.technician?.jobs_completed} trabajos
                   </div>
                 </div>
               </div>
@@ -463,11 +366,11 @@ export default function TrabajoDetallePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Monto</p>
-                  <p className="text-lg font-bold text-foreground">${selectedCotizacion.monto}</p>
+                  <p className="text-lg font-bold text-foreground">${selectedBid.amount}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Tiempo estimado</p>
-                  <p className="font-medium text-foreground">{selectedCotizacion.tiempoEstimado}</p>
+                  <p className="text-xs text-muted-foreground">Días estimados</p>
+                  <p className="font-medium text-foreground">{selectedBid.estimated_days} días</p>
                 </div>
               </div>
 
@@ -480,10 +383,11 @@ export default function TrabajoDetallePage() {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAcceptDialog(false)}>
+            <Button variant="outline" onClick={() => setShowAcceptDialog(false)} disabled={accepting}>
               Cancelar
             </Button>
-            <Button onClick={confirmAccept}>
+            <Button onClick={confirmAccept} disabled={accepting} className="gap-2">
+              {accepting && <Loader2 className="h-4 w-4 animate-spin" />}
               Confirmar selección
             </Button>
           </DialogFooter>

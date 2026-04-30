@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Wrench,
   Search,
@@ -12,15 +12,13 @@ import {
   FileText,
   MessageSquare,
   Settings,
-  Menu,
-  X,
+  Menu, X,
   Clock,
   CheckCircle2,
   AlertCircle,
   Star,
   ChevronRight,
-  MapPin,
-  Calendar,
+  MapPin, Calendar,
   DollarSign,
   Filter,
   MoreVertical,
@@ -30,117 +28,131 @@ import {
   Eye,
   Send,
   Shield,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
-
-const trabajosDisponibles = [
-  {
-    id: "OFP-2025-00045",
-    titulo: "Mantenimiento de 3 aires acondicionados",
-    descripcion: "Necesito mantenimiento preventivo para 3 equipos split en apartamento. Marcas: LG y Samsung.",
-    zona: "Costa del Este",
-    urgencia: "normal",
-    presupuesto: 200,
-    fechaPublicacion: "Hace 2 horas",
-    cliente: {
-      nombre: "María G.",
-      trabajos: 5,
-    },
-    cotizaciones: 2,
-  },
-  {
-    id: "OFP-2025-00044",
-    titulo: "Instalación de aire acondicionado inverter",
-    descripcion: "Instalación de equipo nuevo 12,000 BTU en habitación. Ya tengo el equipo, solo necesito instalación.",
-    zona: "San Francisco",
-    urgencia: "urgente",
-    presupuesto: 150,
-    fechaPublicacion: "Hace 5 horas",
-    cliente: {
-      nombre: "Carlos R.",
-      trabajos: 12,
-    },
-    cotizaciones: 4,
-  },
-  {
-    id: "OFP-2025-00043",
-    titulo: "Reparación - Aire no enfría",
-    descripcion: "Mi aire acondicionado enciende pero no enfría. Es un equipo Carrier de 18,000 BTU, tiene 3 años de uso.",
-    zona: "Bella Vista",
-    urgencia: "emergencia",
-    presupuesto: null,
-    fechaPublicacion: "Hace 1 hora",
-    cliente: {
-      nombre: "Ana M.",
-      trabajos: 3,
-    },
-    cotizaciones: 6,
-  },
-]
-
-const misCotizaciones = [
-  {
-    id: "COT-001",
-    trabajoId: "OFP-2025-00040",
-    titulo: "Limpieza profunda de ductos",
-    estado: "pendiente",
-    monto: 120,
-    fechaEnvio: "2025-04-14",
-    cliente: "Pedro L.",
-  },
-  {
-    id: "COT-002",
-    trabajoId: "OFP-2025-00038",
-    titulo: "Instalación de aire acondicionado nuevo",
-    estado: "aceptada",
-    monto: 180,
-    fechaEnvio: "2025-04-12",
-    cliente: "Juan D.",
-  },
-]
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { getAvailableJobs, getMyBids, storeBid, JobData, BidData } from "@/lib/api"
 
 const urgenciaConfig: Record<string, { label: string; className: string }> = {
-  normal: { label: "Normal", className: "bg-muted text-muted-foreground" },
-  urgente: { label: "Urgente", className: "bg-warning/20 text-warning-foreground" },
-  emergencia: { label: "Emergencia", className: "bg-destructive/20 text-destructive" },
+  normal:    { label: "Normal",     className: "bg-muted text-muted-foreground" },
+  urgent:    { label: "Urgente",    className: "bg-warning/20 text-warning-foreground" },
+  emergency: { label: "Emergencia", className: "bg-destructive/20 text-destructive" },
+}
+
+const estadoBidConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
+  pending:  { label: "Pendiente", variant: "secondary" },
+  accepted: { label: "Aceptada",  variant: "default" },
+  rejected: { label: "Rechazada", variant: "destructive" },
 }
 
 export default function TecnicoDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState("disponibles")
-  const isVerified = true
+  const [activeTab, setActiveTab]     = useState("disponibles")
+  const [trabajos, setTrabajos]       = useState<JobData[]>([])
+  const [misCotizaciones, setMisCotizaciones] = useState<BidData[]>([])
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState<string | null>(null)
+
+  // Modal cotizar
+  const [showBidModal, setShowBidModal] = useState(false)
+  const [selectedJob, setSelectedJob]   = useState<JobData | null>(null)
+  const [submitting, setSubmitting]     = useState(false)
+  const [bidErrors, setBidErrors]       = useState<Record<string, string>>({})
+  const [bidSuccess, setBidSuccess]     = useState(false)
+  const [bidForm, setBidForm] = useState({
+    amount: "", estimated_days: "", proposal: "", availability_date: "",
+  })
+
+  const user = typeof window !== "undefined"
+    ? JSON.parse(localStorage.getItem("user") || "{}")
+    : {}
+  const isVerified = !!user?.is_verified
 
   const navigation = [
-    { name: "Inicio", href: "/dashboard/tecnico", icon: Home, current: true },
-    { name: "Trabajos", href: "/dashboard/tecnico/trabajos", icon: Briefcase, current: false },
-    { name: "Mis Cotizaciones", href: "/dashboard/tecnico/cotizaciones", icon: FileText, current: false },
-    { name: "Mensajes", href: "/dashboard/tecnico/mensajes", icon: MessageSquare, current: false, badge: 3 },
-    { name: "Mi Perfil", href: "/dashboard/tecnico/perfil", icon: User, current: false },
-    { name: "Configuración", href: "/dashboard/tecnico/configuracion", icon: Settings, current: false },
+    { name: "Inicio",           href: "/dashboard/tecnico",              icon: Home,          current: true  },
+    { name: "Trabajos",         href: "/dashboard/tecnico/trabajos",     icon: Briefcase,     current: false },
+    { name: "Mis Cotizaciones", href: "/dashboard/tecnico/cotizaciones", icon: FileText,      current: false },
+    { name: "Mensajes",         href: "/dashboard/tecnico/mensajes",     icon: MessageSquare, current: false, badge: 3 },
+    { name: "Mi Perfil",        href: "/dashboard/tecnico/perfil",       icon: User,          current: false },
+    { name: "Configuración",    href: "/dashboard/tecnico/configuracion",icon: Settings,      current: false },
   ]
+
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true)
+      setError(null)
+      try {
+        const [jobsRes, bidsRes] = await Promise.all([
+          getAvailableJobs(),
+          getMyBids(),
+        ])
+        setTrabajos(jobsRes.data)
+        setMisCotizaciones(bidsRes.data)
+      } catch (err: any) {
+        setError(err.message || "Error al cargar datos")
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [])
+
+  function handleCotizar(job: JobData) {
+    setSelectedJob(job)
+    setBidForm({ amount: "", estimated_days: "", proposal: "", availability_date: "" })
+    setBidErrors({})
+    setBidSuccess(false)
+    setShowBidModal(true)
+  }
+
+  async function handleSubmitBid() {
+    if (!selectedJob) return
+    setBidErrors({})
+    setSubmitting(true)
+    try {
+      await storeBid({
+        job_id:            selectedJob.id,
+        amount:            parseFloat(bidForm.amount),
+        estimated_days:    parseInt(bidForm.estimated_days),
+        proposal:          bidForm.proposal,
+        availability_date: bidForm.availability_date,
+      })
+      setBidSuccess(true)
+      const bidsRes = await getMyBids()
+      setMisCotizaciones(bidsRes.data)
+      setTimeout(() => setShowBidModal(false), 1500)
+    } catch (err: any) {
+      setBidErrors({ general: err.message || "Error al enviar cotización" })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const today = new Date().toISOString().split("T")[0]
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 bg-foreground/20 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
+      {/* ── Sidebar ── */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-sidebar transition-transform duration-200 ease-in-out lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex h-full flex-col">
           {/* Logo */}
@@ -172,9 +184,7 @@ export default function TecnicoDashboard() {
           {/* Navigation */}
           <nav className="flex-1 space-y-1 p-4">
             {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
+              <Link key={item.name} href={item.href}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   item.current
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
@@ -183,7 +193,7 @@ export default function TecnicoDashboard() {
               >
                 <item.icon className="h-5 w-5" />
                 <span>{item.name}</span>
-                {item.badge && (
+                {"badge" in item && item.badge && (
                   <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-sidebar-primary text-xs text-sidebar-primary-foreground">
                     {item.badge}
                   </span>
@@ -196,17 +206,19 @@ export default function TecnicoDashboard() {
           <div className="border-t border-sidebar-border p-4">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
-                <AvatarImage src="" />
-                <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground">CM</AvatarFallback>
+                <AvatarImage src={user?.avatar_url || ""} />
+                <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground">
+                  {user?.name?.charAt(0) || "T"}
+                </AvatarFallback>
               </Avatar>
               <div className="flex-1 overflow-hidden">
                 <div className="flex items-center gap-1">
-                  <p className="truncate text-sm font-medium text-sidebar-foreground">Carlos Mendoza</p>
+                  <p className="truncate text-sm font-medium text-sidebar-foreground">{user?.name || "Técnico"}</p>
                   {isVerified && <Shield className="h-4 w-4 text-sidebar-primary" />}
                 </div>
                 <div className="flex items-center gap-1 text-xs text-sidebar-foreground/60">
                   <Star className="h-3 w-3 fill-warning text-warning" />
-                  4.9 · 127 trabajos
+                  {user?.reputation_score || "0.00"} · {user?.jobs_completed || 0} trabajos
                 </div>
               </div>
               <DropdownMenu>
@@ -238,7 +250,7 @@ export default function TecnicoDashboard() {
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* ── Main Content ── */}
       <div className="lg:pl-64">
         {/* Top Header */}
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card px-4 sm:px-6">
@@ -250,7 +262,6 @@ export default function TecnicoDashboard() {
               <h1 className="text-lg font-semibold text-foreground">Panel de Técnico</h1>
             </div>
           </div>
-
           <div className="flex items-center gap-3">
             <div className="hidden md:block">
               <div className="relative">
@@ -258,7 +269,6 @@ export default function TecnicoDashboard() {
                 <Input placeholder="Buscar trabajos..." className="w-64 pl-10" />
               </div>
             </div>
-
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
               <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
@@ -270,13 +280,14 @@ export default function TecnicoDashboard() {
 
         {/* Page Content */}
         <main className="p-4 sm:p-6">
+
           {/* Stats Cards */}
           <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: "Trabajos este mes", value: "12", icon: Briefcase, color: "text-primary", change: "+3" },
-              { label: "Cotizaciones enviadas", value: "28", icon: Send, color: "text-accent", change: "+8" },
-              { label: "Tasa de aceptación", value: "43%", icon: TrendingUp, color: "text-warning", change: "+5%" },
-              { label: "Ganancias del mes", value: "$1,850", icon: DollarSign, color: "text-accent", change: "+$420" },
+              { label: "Trabajos este mes",      value: user?.jobs_completed || "0", icon: Briefcase,  color: "text-primary", change: "" },
+              { label: "Cotizaciones enviadas",  value: misCotizaciones.length.toString(), icon: Send, color: "text-accent",   change: "" },
+              { label: "Tasa de aceptación",     value: misCotizaciones.length > 0 ? `${Math.round((misCotizaciones.filter(b => b.status === "accepted").length / misCotizaciones.length) * 100)}%` : "0%", icon: TrendingUp, color: "text-warning", change: "" },
+              { label: "Reputación",             value: user?.reputation_score || "0.00", icon: Star,   color: "text-accent",  change: "" },
             ].map((stat) => (
               <Card key={stat.label}>
                 <CardContent className="p-4 sm:p-6">
@@ -284,9 +295,6 @@ export default function TecnicoDashboard() {
                     <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-muted ${stat.color}`}>
                       <stat.icon className="h-5 w-5" />
                     </div>
-                    <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
-                      {stat.change}
-                    </span>
                   </div>
                   <div className="mt-4">
                     <p className="text-2xl font-bold text-foreground">{stat.value}</p>
@@ -307,43 +315,37 @@ export default function TecnicoDashboard() {
                   </div>
                   <div>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-bold text-foreground">4.9</span>
+                      <span className="text-3xl font-bold text-foreground">{user?.reputation_score || "0.00"}</span>
                       <span className="text-muted-foreground">/ 5.0</span>
                     </div>
-                    <p className="text-sm text-muted-foreground">Basado en 127 reseñas</p>
+                    <p className="text-sm text-muted-foreground">
+                      {user?.jobs_completed > 0 ? `Basado en ${user.jobs_completed} trabajos` : "Sin trabajos completados aún"}
+                    </p>
                   </div>
                 </div>
-
-                <div className="flex-1 max-w-md space-y-2">
-                  {[
-                    { stars: 5, count: 98, percentage: 77 },
-                    { stars: 4, count: 22, percentage: 17 },
-                    { stars: 3, count: 5, percentage: 4 },
-                    { stars: 2, count: 2, percentage: 2 },
-                    { stars: 1, count: 0, percentage: 0 },
-                  ].map((rating) => (
-                    <div key={rating.stars} className="flex items-center gap-2">
-                      <span className="w-3 text-xs text-muted-foreground">{rating.stars}</span>
-                      <Star className="h-3 w-3 fill-warning text-warning" />
-                      <Progress value={rating.percentage} className="h-2 flex-1" />
-                      <span className="w-8 text-xs text-muted-foreground">{rating.count}</span>
-                    </div>
-                  ))}
-                </div>
-
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="gap-1 border-accent text-accent">
-                    <Shield className="h-3 w-3" />
-                    Verificado
-                  </Badge>
-                  <Badge variant="outline" className="gap-1">
-                    <TrendingUp className="h-3 w-3" />
-                    Top 10%
-                  </Badge>
+                  {isVerified ? (
+                    <Badge variant="outline" className="gap-1 border-accent text-accent">
+                      <Shield className="h-3 w-3" />
+                      Verificado
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="gap-1 border-warning text-warning">
+                      <AlertCircle className="h-3 w-3" />
+                      Pendiente verificación
+                    </Badge>
+                  )}
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Error */}
+          {error && (
+            <div className="mb-6 rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive">
+              {error}
+            </div>
+          )}
 
           {/* Jobs Tabs */}
           <Card>
@@ -367,11 +369,16 @@ export default function TecnicoDashboard() {
                   <TabsTrigger value="disponibles" className="gap-2">
                     <Eye className="h-4 w-4" />
                     Disponibles
-                    <Badge variant="secondary" className="ml-1">3</Badge>
+                    {!loading && (
+                      <Badge variant="secondary" className="ml-1">{trabajos.length}</Badge>
+                    )}
                   </TabsTrigger>
                   <TabsTrigger value="cotizaciones" className="gap-2">
                     <Send className="h-4 w-4" />
                     Mis Cotizaciones
+                    {!loading && misCotizaciones.length > 0 && (
+                      <Badge variant="secondary" className="ml-1">{misCotizaciones.length}</Badge>
+                    )}
                   </TabsTrigger>
                   <TabsTrigger value="asignados" className="gap-2">
                     <CheckCircle2 className="h-4 w-4" />
@@ -379,106 +386,135 @@ export default function TecnicoDashboard() {
                   </TabsTrigger>
                 </TabsList>
 
+                {/* ── Tab: Disponibles ── */}
                 <TabsContent value="disponibles" className="mt-0">
-                  <div className="space-y-4">
-                    {trabajosDisponibles.map((trabajo) => {
-                      const urgencia = urgenciaConfig[trabajo.urgencia]
-                      return (
-                        <div
-                          key={trabajo.id}
-                          className="rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50"
-                        >
-                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="flex-1 space-y-2">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-mono text-xs text-muted-foreground">{trabajo.id}</span>
-                                <span className={`rounded-full px-2 py-0.5 text-xs ${urgencia.className}`}>
-                                  {urgencia.label}
-                                </span>
-                                <span className="text-xs text-muted-foreground">{trabajo.fechaPublicacion}</span>
-                              </div>
-                              <h3 className="font-medium text-foreground">{trabajo.titulo}</h3>
-                              <p className="text-sm text-muted-foreground line-clamp-2">{trabajo.descripcion}</p>
-                              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="h-4 w-4" />
-                                  {trabajo.zona}
-                                </span>
-                                {trabajo.presupuesto && (
-                                  <span className="flex items-center gap-1">
-                                    <DollarSign className="h-4 w-4" />
-                                    Presupuesto: ${trabajo.presupuesto}
-                                  </span>
-                                )}
-                                <span className="flex items-center gap-1">
-                                  <Users className="h-4 w-4" />
-                                  {trabajo.cotizaciones} cotizaciones
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
-                                  <AvatarFallback className="text-xs">{trabajo.cliente.nombre.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm text-muted-foreground">
-                                  {trabajo.cliente.nombre} · {trabajo.cliente.trabajos} trabajos publicados
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm" asChild>
-                                <Link href={`/dashboard/tecnico/trabajos/${trabajo.id}`}>
-                                  Ver Detalle
-                                </Link>
-                              </Button>
-                              <Button size="sm" className="gap-1" asChild>
-                                <Link href={`/dashboard/tecnico/trabajos/${trabajo.id}/cotizar`}>
-                                  <Send className="h-4 w-4" />
-                                  Cotizar
-                                </Link>
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="cotizaciones" className="mt-0">
-                  <div className="space-y-4">
-                    {misCotizaciones.map((cotizacion) => (
-                      <div
-                        key={cotizacion.id}
-                        className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs text-muted-foreground">{cotizacion.trabajoId}</span>
-                            <Badge variant={cotizacion.estado === "aceptada" ? "default" : "secondary"}>
-                              {cotizacion.estado === "aceptada" ? "Aceptada" : "Pendiente"}
-                            </Badge>
-                          </div>
-                          <h3 className="font-medium text-foreground">{cotizacion.titulo}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Cliente: {cotizacion.cliente} · Enviada: {cotizacion.fechaEnvio}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <p className="text-lg font-bold text-foreground">${cotizacion.monto}</p>
-                            <p className="text-xs text-muted-foreground">Tu cotización</p>
-                          </div>
-                          <Button variant="outline" size="sm" className="gap-1">
-                            Ver
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
+                  {loading ? (
+                    <div className="flex items-center justify-center py-16">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : trabajos.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                        <Briefcase className="h-8 w-8 text-muted-foreground" />
                       </div>
-                    ))}
-                  </div>
+                      <h3 className="mb-2 text-lg font-medium text-foreground">No hay trabajos disponibles</h3>
+                      <p className="text-sm text-muted-foreground">Los nuevos trabajos en tu zona aparecerán aquí</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {trabajos.map((trabajo) => {
+                        const urgencia = urgenciaConfig[trabajo.urgency] || urgenciaConfig.normal
+                        const yaCotice = misCotizaciones.some(b => b.job_id === trabajo.id)
+                        return (
+                          <div key={trabajo.id} className="rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="flex-1 space-y-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="font-mono text-xs text-muted-foreground">{trabajo.code}</span>
+                                  <span className={`rounded-full px-2 py-0.5 text-xs ${urgencia.className}`}>
+                                    {urgencia.label}
+                                  </span>
+                                </div>
+                                <h3 className="font-medium text-foreground">{trabajo.title}</h3>
+                                <p className="text-sm text-muted-foreground line-clamp-2">{trabajo.description}</p>
+                                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="h-4 w-4" />
+                                    {trabajo.zone}
+                                  </span>
+                                  {trabajo.budget && (
+                                    <span className="flex items-center gap-1">
+                                      <DollarSign className="h-4 w-4" />
+                                      Presupuesto: ${trabajo.budget}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex gap-2 flex-shrink-0">
+                                {yaCotice ? (
+                                  <Badge variant="outline" className="gap-1 border-accent text-accent">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    Ya cotizaste
+                                  </Badge>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    className="gap-1"
+                                    disabled={!isVerified}
+                                    onClick={() => handleCotizar(trabajo)}
+                                  >
+                                    <Send className="h-4 w-4" />
+                                    Cotizar
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </TabsContent>
 
+                {/* ── Tab: Mis Cotizaciones ── */}
+                <TabsContent value="cotizaciones" className="mt-0">
+                  {loading ? (
+                    <div className="flex items-center justify-center py-16">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : misCotizaciones.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                        <Send className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <h3 className="mb-2 text-lg font-medium text-foreground">Sin cotizaciones enviadas</h3>
+                      <p className="mb-6 max-w-sm text-sm text-muted-foreground">Tus cotizaciones aparecerán aquí</p>
+                      <Button variant="outline" onClick={() => setActiveTab("disponibles")}>
+                        Ver trabajos disponibles
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {misCotizaciones.map((cotizacion) => {
+                        const estadoBid = estadoBidConfig[cotizacion.status] || estadoBidConfig.pending
+                        return (
+                          <div key={cotizacion.id} className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs text-muted-foreground">Job #{cotizacion.job_id}</span>
+                                <Badge variant={estadoBid.variant}>{estadoBid.label}</Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-1">{cotizacion.proposal}</p>
+                              <div className="flex gap-4 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  Disponible: {cotizacion.availability_date.split("T")[0]}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {cotizacion.estimated_days} días estimados
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4 flex-shrink-0">
+                              <div className="text-right">
+                                <p className="text-lg font-bold text-foreground">${cotizacion.amount}</p>
+                                <p className="text-xs text-muted-foreground">Tu cotización</p>
+                              </div>
+                              <Button variant="outline" size="sm" className="gap-1">
+                                Ver
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* ── Tab: Asignados ── */}
                 <TabsContent value="asignados" className="mt-0">
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
@@ -498,6 +534,85 @@ export default function TecnicoDashboard() {
           </Card>
         </main>
       </div>
+
+      {/* ── Modal: Enviar Cotización ── */}
+      <Dialog open={showBidModal} onOpenChange={setShowBidModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enviar Cotización</DialogTitle>
+            <DialogDescription>
+              {selectedJob?.code} — {selectedJob?.title}
+            </DialogDescription>
+          </DialogHeader>
+
+          {bidSuccess ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent/10">
+                <CheckCircle2 className="h-8 w-8 text-accent" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">¡Cotización enviada!</h3>
+              <p className="text-sm text-muted-foreground">El cliente será notificado</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 py-2">
+                {bidErrors.general && (
+                  <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+                    {bidErrors.general}
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="amount">Monto (USD) *</Label>
+                    <Input
+                      id="amount" type="number" step="0.01" min="1" placeholder="0.00"
+                      value={bidForm.amount}
+                      onChange={(e) => setBidForm({ ...bidForm, amount: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="days">Días estimados *</Label>
+                    <Input
+                      id="days" type="number" min="1" placeholder="1"
+                      value={bidForm.estimated_days}
+                      onChange={(e) => setBidForm({ ...bidForm, estimated_days: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="date">Disponible desde *</Label>
+                  <Input
+                    id="date" type="date" min={today}
+                    value={bidForm.availability_date}
+                    onChange={(e) => setBidForm({ ...bidForm, availability_date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="proposal">
+                    Propuesta * <span className="text-muted-foreground text-xs">(20-500 caracteres)</span>
+                  </Label>
+                  <Textarea
+                    id="proposal" rows={4} maxLength={500}
+                    placeholder="Describe qué incluye tu servicio, materiales, garantía..."
+                    value={bidForm.proposal}
+                    onChange={(e) => setBidForm({ ...bidForm, proposal: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground text-right">{bidForm.proposal.length}/500</p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowBidModal(false)} disabled={submitting}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSubmitBid} disabled={submitting} className="gap-2">
+                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {submitting ? "Enviando..." : "Enviar cotización"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
