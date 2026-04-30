@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
+import { useAuth } from "@/hooks/use-auth"
 import {
   Wrench,
   Plus,
@@ -98,8 +99,13 @@ const urgenciaConfig: Record<string, { label: string; className: string }> = {
 }
 
 export default function ClienteDashboard() {
+  const { logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("todos")
+
+  const handleLogout = async () => {
+    await logout()
+  }
 
   const navigation = [
     { name: "Inicio", href: "/dashboard/cliente", icon: Home, current: true },
@@ -183,7 +189,7 @@ export default function ClienteDashboard() {
                     Configuración
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Cerrar Sesión
                   </DropdownMenuItem>

@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
+import { useAuth } from "@/hooks/use-auth"
 import {
   Wrench,
   Search,
@@ -62,6 +63,7 @@ const estadoBidConfig: Record<string, { label: string; variant: "default" | "sec
 }
 
 export default function TecnicoDashboard() {
+  const { logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activeTab, setActiveTab]     = useState("disponibles")
   const [trabajos, setTrabajos]       = useState<JobData[]>([])
@@ -84,6 +86,10 @@ export default function TecnicoDashboard() {
     : {}
   const isVerified = !!user?.is_verified
 
+  const handleLogout = async () => {
+    await logout()
+  }
+
   const navigation = [
     { name: "Inicio",           href: "/dashboard/tecnico",              icon: Home,          current: true  },
     { name: "Trabajos",         href: "/dashboard/tecnico/trabajos",     icon: Briefcase,     current: false },
@@ -93,7 +99,7 @@ export default function TecnicoDashboard() {
     { name: "Configuración",    href: "/dashboard/tecnico/configuracion",icon: Settings,      current: false },
   ]
 
-  useEffect(() => {
+    useEffect(() => {
     async function loadData() {
       setLoading(true)
       setError(null)
@@ -239,7 +245,7 @@ export default function TecnicoDashboard() {
                     Configuración
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Cerrar Sesión
                   </DropdownMenuItem>
