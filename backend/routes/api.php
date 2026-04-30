@@ -48,6 +48,10 @@ Route::middleware('auth')->group(function () {
         Route::put('/profile', [AuthController::class, 'updateProfile']);
         Route::post('/trabajos', [JobController::class, 'store']);
         Route::get('/trabajos', [JobController::class, 'index']);
+
+         // ── Cotizaciones (vista del cliente) ──────────────────────────────────
+        // Ver todas las cotizaciones de uno de sus trabajos
+        Route::get('/trabajos/{job}/cotizaciones', [BidController::class, 'index']);
     });
 
     // -------------------------------------------------------
@@ -70,8 +74,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/profile', [AuthController::class, 'profile']);
         Route::put('/profile', [AuthController::class, 'updateProfile']);
         Route::get('/trabajos-disponibles', [JobController::class, 'available']);
-        Route::post('/cotizaciones', [BidController::class, 'store']);
-        Route::get('/mis-cotizaciones', [BidController::class, 'myBids']);
+        
+        // ── Cotizaciones (vista del técnico) ──────────────────────────────────
+        Route::post('/cotizaciones', [BidController::class, 'store']);        // Enviar cotización
+        Route::get('/mis-cotizaciones', [BidController::class, 'myBids']);   // Ver mis cotizaciones
+        Route::put('/cotizaciones/{bid}', [BidController::class, 'update']); // Editar cotización propia
     });
 
     // -------------------------------------------------------
@@ -134,10 +141,13 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+
+    // Ver detalle de una cotización específica (ambos roles)
+    Route::get('/cotizaciones/{bid}', [BidController::class, 'show']);
 });
 
 // ============================================================
 // RUTAS PÚBLICAS DE RECURSOS
 // ============================================================
 Route::apiResource('jobs', JobController::class);
-Route::apiResource('bids', BidController::class);
+
