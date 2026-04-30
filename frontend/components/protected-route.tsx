@@ -19,8 +19,14 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     // SOLO proteger rutas privadas
     const isProtectedRoute = pathname.startsWith("/dashboard") || pathname.startsWith("/admin")
 
+<<<<<<< HEAD
     if (!isAuthenticated && isProtectedRoute) {
       router.replace(`/`)
+=======
+    // Si no está autenticado y no estamos en login, redirigir al login
+    if (!isAuthenticated && pathname !== "/login") {
+      router.push(`/login?redirect=${pathname}`)
+>>>>>>> 09edeb1 (LOGOUT FUNCIONANDO falta redirigir al landing)
       return
     }
 
