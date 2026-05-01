@@ -21,6 +21,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     if (!isAuthenticated && isProtectedRoute) {
       router.replace(`/`)
 =======
@@ -28,6 +29,10 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     if (!isAuthenticated && pathname !== "/login") {
       router.push(`/login?redirect=${pathname}`)
 >>>>>>> 09edeb1 (LOGOUT FUNCIONANDO falta redirigir al landing)
+=======
+    if (!isAuthenticated && isProtectedRoute) {
+      router.replace(`/`)
+>>>>>>> 7a8113c (Logout Funcionando 100%)
 =======
     if (!isAuthenticated && isProtectedRoute) {
       router.replace(`/`)
