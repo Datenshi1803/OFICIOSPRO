@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, createContext, useContext, ReactNode } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 
 interface User {
   id: number
@@ -16,7 +16,7 @@ interface AuthContextType {
   isLoading: boolean
   isAuthenticated: boolean
   login: (token: string, user: User) => void
-  logout: () => void
+  logout: () => Promise<void>
   hasRole: (roles: string[]) => boolean
   checkAuth: () => Promise<void>
 }
@@ -45,13 +45,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Verificar que el usuario esté activo
         if (parsedUser.is_active === false) {
-          logout()
+          await logout()
           return
         }
 
         setUser(parsedUser)
       } catch {
-        logout()
+        await logout()
       }
     } else {
       setUser(null)
@@ -75,11 +75,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const logout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
-    setUser(null)
-    router.push("/login")
+  const logout = async () => {
+    try {
+      // Llamar al backend para invalidar la sesión
+      const token = localStorage.getItem("token")
+      if (token) {
+        await fetch("http://localhost:8000/api/auth/logout", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Accept": "application/json",
+          },
+        }).catch(() => {
+          // Continuar con el logout local incluso si falla la llamada
+        })
+      }
+    } catch {
+      // Continuar con el logout local incluso si hay error
+    } finally {
+      // Limpiar todos los datos del usuario localmente
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      localStorage.removeItem("userRole")
+      sessionStorage.clear()
+      
+      setUser(null)
+      router.replace("/")
+    }
   }
 
   const hasRole = (roles: string[]): boolean => {
@@ -118,10 +140,11 @@ export function useAuth() {
 export function useRoleGuard(allowedRoles: string[]) {
   const { user, isLoading, isAuthenticated } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     if (!isLoading) {
-      if (!isAuthenticated) {
+      if (!isAuthenticated && pathname !== "/login") {
         router.push("/login")
       } else if (user && !allowedRoles.includes(user.role)) {
         // Redireccionar al dashboard correcto según el rol
@@ -134,7 +157,7 @@ export function useRoleGuard(allowedRoles: string[]) {
         }
       }
     }
-  }, [isLoading, isAuthenticated, user, allowedRoles, router])
+  }, [isLoading, isAuthenticated, user, allowedRoles, router, pathname])
 
   return { user, isLoading, isAuthenticated }
 }

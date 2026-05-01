@@ -16,10 +16,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   useEffect(() => {
     if (isLoading) return
+    // SOLO proteger rutas privadas
+    const isProtectedRoute = pathname.startsWith("/dashboard") || pathname.startsWith("/admin")
 
-    // Si no está autenticado, redirigir al login
-    if (!isAuthenticated) {
-      router.push(`/login?redirect=${pathname}`)
+    if (!isAuthenticated && isProtectedRoute) {
+      router.replace(`/`)
       return
     }
 
