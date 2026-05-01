@@ -101,10 +101,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setUser(null)
 <<<<<<< HEAD
+<<<<<<< HEAD
       router.replace("/")
 =======
       router.push("/")
 >>>>>>> 95d25d3 (Funcion Logout)
+=======
+      router.replace("/")
+>>>>>>> 7a8113c (Logout Funcionando 100%)
     }
   }
 

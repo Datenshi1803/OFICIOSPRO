@@ -20,6 +20,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     const isProtectedRoute = pathname.startsWith("/dashboard") || pathname.startsWith("/admin")
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     if (!isAuthenticated && isProtectedRoute) {
       router.replace(`/`)
 =======
@@ -27,6 +28,10 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     if (!isAuthenticated && pathname !== "/login") {
       router.push(`/login?redirect=${pathname}`)
 >>>>>>> 09edeb1 (LOGOUT FUNCIONANDO falta redirigir al landing)
+=======
+    if (!isAuthenticated && isProtectedRoute) {
+      router.replace(`/`)
+>>>>>>> 7a8113c (Logout Funcionando 100%)
       return
     }
 
@@ -52,6 +57,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
       </div>
     )
   }
+  console.log("User:", user, "Path:", pathname)
 
   // Si no tiene acceso, no mostrar nada (esperando redirección)
   if (!isAuthenticated || (user && !allowedRoles.includes(user.role))) {
