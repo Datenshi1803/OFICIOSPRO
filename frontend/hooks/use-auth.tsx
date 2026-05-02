@@ -100,23 +100,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionStorage.clear()
       
       setUser(null)
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
+
       router.replace("/")
-=======
-      router.push("/")
->>>>>>> 95d25d3 (Funcion Logout)
-=======
-      router.replace("/")
->>>>>>> 7a8113c (Logout Funcionando 100%)
-=======
-      router.replace("/")
->>>>>>> 7a8113c (Logout Funcionando 100%)
-=======
-      router.replace("/")
->>>>>>> 7a8113c (Logout Funcionando 100%)
+
     }
   }
 
