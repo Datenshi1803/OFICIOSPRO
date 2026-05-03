@@ -21,6 +21,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useRouter } from "next/navigation"
+import { storeJob } from "@/lib/api"
+import { Loader2 } from "lucide-react"
 
 const zonasPanama = [
   "Panamá Centro",
@@ -49,14 +52,17 @@ const categorias = [
 ]
 
 export default function NuevoTrabajoPage() {
+  const router = useRouter()
   const [step, setStep] = useState(1)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const [formData, setFormData] = useState({
     titulo: "",
     descripcion: "",
     categoria: "",
     zona: "",
     direccion: "",
-    urgencia: "normal",
+    urgencia: "normal" as 'normal' | 'urgent' | 'emergency',
     presupuesto: "",
     imagenes: [] as File[],
   })
@@ -90,15 +96,43 @@ export default function NuevoTrabajoPage() {
     setPreviewImages((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (step === 1) {
       setStep(2)
     } else if (step === 2) {
       setStep(3)
     } else {
-      console.log("Trabajo publicado:", formData)
-      // Redirect to confirmation or job list
+      setIsLoading(true)
+      setError("")
+
+      // Map category string to category_id
+      const categoryMap: Record<string, number> = {
+        'mantenimiento': 1,
+        'reparacion': 2,
+        'instalacion': 3,
+        'limpieza': 4,
+        'recarga': 5,
+        'diagnostico': 2
+      }
+
+      const category_id = categoryMap[formData.categoria] || 1
+
+      try {
+        await storeJob({
+          title: formData.titulo,
+          description: formData.descripcion + (formData.direccion ? `\n\nDirección: ${formData.direccion}` : ''),
+          category_id,
+          zone: formData.zona,
+          urgency: formData.urgencia,
+          budget: formData.presupuesto ? parseFloat(formData.presupuesto) : null
+        })
+
+        router.push('/dashboard/cliente/trabajos')
+      } catch (err: any) {
+        setError(err.message || 'Error al publicar el trabajo')
+        setIsLoading(false)
+      }
     }
   }
 
@@ -137,31 +171,36 @@ export default function NuevoTrabajoPage() {
       </header>
 
       {/* Progress Bar */}
-      <div className="mx-auto max-w-3xl px-4 py-4">
-        <div className="flex items-center gap-2">
-          {[1, 2, 3].map((s) => (
-            <div key={s} className="flex flex-1 items-center gap-2">
+      <div className="mx-auto max-w-3xl px-8 py-6">
+        <div className="relative flex justify-between">
+          <div className="absolute left-0 top-4 -z-10 h-1 w-full -translate-y-1/2 bg-muted">
+            <div
+              className="h-full bg-primary transition-all duration-300 ease-in-out"
+              style={{ width: `${((step - 1) / 2) * 100}%` }}
+            />
+          </div>
+
+          {[
+            { id: 1, label: "Descripción" },
+            { id: 2, label: "Ubicación" },
+            { id: 3, label: "Confirmar" }
+          ].map((s) => (
+            <div key={s.id} className="flex flex-col items-center gap-2">
               <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
-                  s < step
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors duration-300 ${s.id < step
                     ? "bg-primary text-primary-foreground"
-                    : s === step
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                }`}
+                    : s.id === step
+                      ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
+                      : "bg-muted text-muted-foreground border-2 border-background"
+                  }`}
               >
-                {s < step ? <CheckCircle2 className="h-5 w-5" /> : s}
+                {s.id < step ? <CheckCircle2 className="h-5 w-5" /> : s.id}
               </div>
-              {s < 3 && (
-                <div className={`h-1 flex-1 rounded ${s < step ? "bg-primary" : "bg-muted"}`} />
-              )}
+              <span className={`text-xs transition-colors duration-300 ${s.id <= step ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                {s.label}
+              </span>
             </div>
           ))}
-        </div>
-        <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-          <span>Descripción</span>
-          <span>Ubicación</span>
-          <span>Confirmar</span>
         </div>
       </div>
 
@@ -487,14 +526,28 @@ export default function NuevoTrabajoPage() {
           )}
 
           {/* Navigation Buttons */}
+          {error && (
+            <div className="mt-4 rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
           <div className="mt-6 flex gap-3">
             {step > 1 && (
-              <Button type="button" variant="outline" className="flex-1" onClick={() => setStep(step - 1)}>
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setStep(step - 1)} disabled={isLoading}>
                 Anterior
               </Button>
             )}
-            <Button type="submit" className="flex-1" disabled={!canProceed()}>
-              {step < 3 ? "Continuar" : "Publicar Trabajo"}
+            <Button type="submit" className="flex-1" disabled={!canProceed() || isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Publicando...
+                </>
+              ) : step < 3 ? (
+                "Continuar"
+              ) : (
+                "Publicar Trabajo"
+              )}
             </Button>
           </div>
         </form>

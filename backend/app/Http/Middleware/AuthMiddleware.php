@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth; 
 
 class AuthMiddleware
 {
@@ -50,7 +51,8 @@ class AuthMiddleware
                 'error' => 'Su cuenta ha sido desactivada. Contacte al administrador.'
             ], 403);
         }
-
+        
+        Auth::setUser($user);
         // Adjuntar usuario a la request
         $request->setUserResolver(fn () => $user);
         

@@ -9,6 +9,10 @@ interface User {
   email: string
   role: "client" | "technician" | "admin"
   is_active: boolean
+  avatar_url?: string
+  is_verified?: boolean
+  reputation_score?: string | number
+  jobs_completed?: number
 }
 
 interface AuthContextType {
@@ -100,7 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionStorage.clear()
       
       setUser(null)
+
       router.replace("/")
+
     }
   }
 
