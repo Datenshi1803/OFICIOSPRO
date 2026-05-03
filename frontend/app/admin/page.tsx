@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useState, useEffect } from "react"
+import { useAuth } from "@/hooks/use-auth"
 import {
   Wrench,
   Search,
@@ -132,11 +133,16 @@ const disputas = [
 ]
 
 export default function AdminDashboard() {
+  const { logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
   const [users, setUsers] = useState<UserData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const handleLogout = async () => {
+    await logout()
+  }
 
   useEffect(() => {
     loadUsers()
@@ -248,10 +254,13 @@ export default function AdminDashboard() {
                 <p className="truncate text-sm font-medium text-sidebar-foreground">Administrador</p>
                 <p className="truncate text-xs text-sidebar-foreground/60">admin@oficiospro.com</p>
               </div>
-              <Button variant="ghost" size="icon" className="text-sidebar-foreground hover:bg-sidebar-accent" asChild>
-                <Link href="/login">
-                  <LogOut className="h-4 w-4" />
-                </Link>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-sidebar-foreground hover:bg-sidebar-accent"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4" />
               </Button>
             </div>
           </div>

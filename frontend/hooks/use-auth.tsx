@@ -100,7 +100,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionStorage.clear()
       
       setUser(null)
+
       router.replace("/")
+
     }
   }
 

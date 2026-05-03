@@ -1,8 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Wrench, Eye, EyeOff, Mail, Lock, ArrowLeft, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,9 +10,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { loginUser } from "@/lib/api"
+import { useAuth } from "@/hooks/use-auth"
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const { login } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -21,6 +24,9 @@ export default function LoginPage() {
     password: "",
     remember: false,
   })
+
+  // Obtener el parámetro redirect de la URL
+  const redirectParam = searchParams.get("redirect")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,19 +39,15 @@ export default function LoginPage() {
         password: formData.password,
       })
 
-      // Guardar token y usuario en localStorage
-      if (response.token) {
-        localStorage.setItem("token", response.token)
-        localStorage.setItem("user", JSON.stringify(response.user))
-      }
-
-      // Redireccionar según el rol del usuario
-      if (response.user.role === "technician") {
-        router.push("/dashboard/tecnico")
-      } else if (response.user.role === "admin") {
-        router.push("/admin")
-      } else {
-        router.push("/dashboard/cliente")
+      // Usar el contexto de autenticación para guardar y redirigir
+      if (response.token && response.user) {
+        login(response.token, response.user)
+        
+        // Si hay un parámetro redirect válido, usarlo
+        // De lo contrario, el hook se encargará de la redirección según el rol
+        if (redirectParam && redirectParam !== "/login") {
+          router.push(redirectParam)
+        }
       }
     } catch (err: any) {
       setError(err.message || "Error al iniciar sesión")
