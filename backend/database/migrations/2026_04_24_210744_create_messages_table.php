@@ -6,24 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('messages', function (Blueprint $table) {
-        $table->id(); // BIGINT UNSIGNED, PK, AUTO_INCREMENT
-        $table->foreignId('job_id')->constrained('jobs'); // FK -> jobs.id, NOT NULL
-        $table->foreignId('sender_id')->constrained('users'); // FK -> users.id, NOT NULL
-        $table->text('message'); // TEXT, NOT NULL
-        $table->boolean('is_read')->default(false); // BOOLEAN, DEFAULT false
-        $table->timestamps(); // created_at, updated_at
-    });
+            $table->id();
+            $table->foreignId('job_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('sender_id')->constrained('users')->cascadeOnDelete();
+            $table->text('content')->nullable();
+            $table->string('attachment_url', 500)->nullable();
+            $table->timestamp('read_at')->nullable();
+            $table->timestamps();
+        });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('messages');

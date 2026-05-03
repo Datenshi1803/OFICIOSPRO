@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\User\UserController;
 use App\Http\Controllers\Api\Job\JobController;
 use App\Http\Controllers\Api\Bid\BidController;
+use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\WebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,6 +28,24 @@ Route::prefix('auth')->group(function () {
 // ============================================================
 // RUTAS PROTEGIDAS CON AUTH CUSTOM
 // ============================================================
+
+// Webhook — sin autenticación (PagueloFácil lo llama directamente)
+Route::post('/webhooks/paguelofacil', [WebhookController::class, 'paguelofacil'])
+    ->name('webhooks.paguelofacil');
+
+// Rutas públicas
+Route::get('/bid-credit-packages', [PaymentController::class, 'packages'])
+    ->name('bid-credit-packages.index');
+
+// Rutas autenticadas
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/me/quota',    [PaymentController::class, 'quota'])->name('quota.show');
+    Route::get('/me/payments', [PaymentController::class, 'history'])->name('payments.history');
+
+    Route::post('/payments/bid-credits', [PaymentController::class, 'initiate'])->name('payments.initiate');
+    Route::post('/payments/confirm',     [PaymentController::class, 'confirm'])->name('payments.confirm');
+    });
+
 Route::middleware('auth')->group(function () {
 
     // -------------------------------------------------------

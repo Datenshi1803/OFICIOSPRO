@@ -6,26 +6,22 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('bid_credit_packages', function (Blueprint $table) {
-        $table->id(); // BIGINT UNSIGNED, PK, AUTO_INCREMENT
-        $table->string('name', 100); // VARCHAR(100), NOT NULL
-        $table->integer('credits')->unsigned(); // INT UNSIGNED, NOT NULL
-        $table->decimal('price', 10, 2); // DECIMAL(10,2), NOT NULL
-        $table->boolean('is_active')->default(true); // BOOLEAN, DEFAULT true
-        $table->timestamps(); // created_at, updated_at
-    });
+            $table->id();
+            $table->string('name', 100);
+            $table->unsignedTinyInteger('credits');
+            $table->decimal('price', 10, 2);
+            $table->boolean('is_featured')->default(false);
+            $table->boolean('is_active')->default(true);
+            $table->unsignedTinyInteger('sort_order')->default(0);
+            $table->timestamps();
+        });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('bid_credits_packages');
+        Schema::dropIfExists('bid_credit_packages');
     }
 };

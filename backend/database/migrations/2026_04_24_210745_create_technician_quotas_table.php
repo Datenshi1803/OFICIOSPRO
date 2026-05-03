@@ -6,23 +6,22 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('technician_quotas', function (Blueprint $table) {
-        $table->id(); // BIGINT UNSIGNED, PK, AUTO_INCREMENT
-        $table->foreignId('technician_id')->unique()->constrained('users'); // FK -> users.id, UNIQUE, NOT NULL
-        $table->integer('remaining_quotes')->unsigned(); // INT UNSIGNED, NOT NULL
-        $table->timestamp('expires_at')->nullable(); // TIMESTAMP, NULLABLE
-        $table->timestamps(); // created_at, updated_at
-    });
+            $table->id();
+            $table->foreignId('technician_id')
+                  ->unique()
+                  ->constrained('users')
+                  ->cascadeOnDelete();
+            $table->unsignedTinyInteger('free_bids_per_week')->default(2);
+            $table->unsignedTinyInteger('free_bids_used')->default(0);
+            $table->unsignedSmallInteger('paid_bids_remaining')->default(0);
+            $table->timestamp('week_reset_at');
+            $table->timestamps();
+        });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('technician_quotas');
