@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useState, useEffect } from "react"
+import { useAuth } from "@/hooks/use-auth"
 import {
   Wrench,
   Plus,
