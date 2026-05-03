@@ -151,6 +151,6 @@ Route::middleware('auth')->group(function () {
 // ============================================================
 // RUTAS PÚBLICAS DE RECURSOS
 // ============================================================
-Route::apiResource('jobs', JobController::class);
+//Route::apiResource('jobs', JobController::class);
 Route::get('/jobs', [JobController::class, 'index']);
 Route::get('/jobs/available', [JobController::class, 'available']);
