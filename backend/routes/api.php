@@ -47,7 +47,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/profile', [AuthController::class, 'profile']);
         Route::put('/profile', [AuthController::class, 'updateProfile']);
         Route::post('/trabajos', [JobController::class, 'store']);
-        Route::get('/trabajos', [JobController::class, 'index']);
+        Route::get('/trabajos', [JobController::class, 'clientJobs']);
 
          // ── Cotizaciones (vista del cliente) ──────────────────────────────────
         // Ver todas las cotizaciones de uno de sus trabajos
@@ -73,7 +73,9 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/profile', [AuthController::class, 'profile']);
         Route::put('/profile', [AuthController::class, 'updateProfile']);
+        
         Route::get('/trabajos-disponibles', [JobController::class, 'available']);
+        Route::get('/mis-trabajos', [JobController::class, 'myJobs']);
         
         // ── Cotizaciones (vista del técnico) ──────────────────────────────────
         Route::post('/cotizaciones', [BidController::class, 'store']);        // Enviar cotización
@@ -150,4 +152,5 @@ Route::middleware('auth')->group(function () {
 // RUTAS PÚBLICAS DE RECURSOS
 // ============================================================
 Route::apiResource('jobs', JobController::class);
-
+Route::get('/jobs', [JobController::class, 'index']);
+Route::get('/jobs/available', [JobController::class, 'available']);

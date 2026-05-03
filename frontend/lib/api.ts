@@ -285,6 +285,26 @@ export async function getAvailableJobs(): Promise<{ success: boolean; data: JobD
   return response.json()
 }
 
+// ── Técnico: ver sus trabajos asignados ────────────────────────────────────────
+export async function getTechnicianJobs(): Promise<{ success: boolean; data: JobData[] }> {
+  const token = localStorage.getItem('token')
+
+  const response = await fetch(`${API_URL}/technician/mis-trabajos`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || 'Error al obtener trabajos asignados')
+  }
+
+  return response.json()
+}
+
 // ── Técnico: enviar cotización ────────────────────────────────────────────────
 export async function storeBid(data: StoreBidData): Promise<{ success: boolean; message: string; data: BidData }> {
   const token = localStorage.getItem('token')
@@ -370,6 +390,37 @@ export async function getJobBids(
   if (!response.ok) {
     const error = await response.json()
     throw new Error(error.message || 'Error al obtener cotizaciones')
+  }
+
+  return response.json()
+}
+
+export interface StoreJobData {
+  title: string
+  description: string
+  category_id: number
+  zone: string
+  urgency: 'normal' | 'urgent' | 'emergency'
+  budget?: number | null
+}
+
+// ── Cliente: crear un trabajo ─────────────────────────────────────────────────
+export async function storeJob(data: StoreJobData): Promise<{ success: boolean; message: string; data: JobData }> {
+  const token = localStorage.getItem('token')
+
+  const response = await fetch(`${API_URL}/client/trabajos`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || 'Error al crear el trabajo')
   }
 
   return response.json()
