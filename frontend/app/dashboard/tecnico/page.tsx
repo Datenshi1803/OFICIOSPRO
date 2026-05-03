@@ -63,7 +63,7 @@ const estadoBidConfig: Record<string, { label: string; variant: "default" | "sec
 }
 
 export default function TecnicoDashboard() {
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activeTab, setActiveTab]     = useState("disponibles")
   const [trabajos, setTrabajos]       = useState<JobData[]>([])
@@ -81,10 +81,8 @@ export default function TecnicoDashboard() {
     amount: "", estimated_days: "", proposal: "", availability_date: "",
   })
 
-  const user = typeof window !== "undefined"
-    ? JSON.parse(localStorage.getItem("user") || "{}")
-    : {}
   const isVerified = !!user?.is_verified
+  const jobsCompleted = user?.jobs_completed ?? 0
 
   const handleLogout = async () => {
     await logout()
@@ -325,7 +323,7 @@ export default function TecnicoDashboard() {
                       <span className="text-muted-foreground">/ 5.0</span>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {user?.jobs_completed > 0 ? `Basado en ${user.jobs_completed} trabajos` : "Sin trabajos completados aún"}
+                      {jobsCompleted > 0 ? `Basado en ${jobsCompleted} trabajos` : "Sin trabajos completados aún"}
                     </p>
                   </div>
                 </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import {
   Wrench,
@@ -59,17 +59,13 @@ const urgenciaConfig: Record<string, { label: string; className: string }> = {
 }
 
 export default function ClienteDashboard() {
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("todos")
   
   const [trabajos, setTrabajos] = useState<JobData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  const user = typeof window !== "undefined"
-    ? JSON.parse(localStorage.getItem("user") || "{}")
-    : {}
 
   const handleLogout = async () => {
     await logout()

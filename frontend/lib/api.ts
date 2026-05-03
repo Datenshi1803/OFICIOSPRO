@@ -263,6 +263,10 @@ export interface JobData {
   status: string
   created_at: string
   category?: { id: number; name: string }
+  client?: {
+    name: string
+    reputation_score?: string | number
+  }
 }
 
 // ── Técnico: ver trabajos disponibles ────────────────────────────────────────

@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useState, useEffect } from "react"
+import { useAuth } from "@/hooks/use-auth"
 import {
   Wrench,
   Search,
@@ -61,11 +62,16 @@ const estadoConfig: Record<string, { label: string; variant: "default" | "second
 }
 
 export default function TecnicoTrabajos() {
+  const { logout, user } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("todos")
   const [trabajos, setTrabajos] = useState<JobData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const handleLogout = async () => {
+    await logout()
+  }
 
   // Modals state
   const [selectedJob, setSelectedJob] = useState<JobData | null>(null)
@@ -79,9 +85,6 @@ export default function TecnicoTrabajos() {
     amount: "", estimated_days: "", proposal: "", availability_date: "",
   })
 
-  const user = typeof window !== "undefined"
-    ? JSON.parse(localStorage.getItem("user") || "{}")
-    : {}
   const isVerified = !!user?.is_verified
 
   const navigation = [
@@ -237,7 +240,7 @@ export default function TecnicoTrabajos() {
                     Configuración
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Cerrar Sesión
                   </DropdownMenuItem>

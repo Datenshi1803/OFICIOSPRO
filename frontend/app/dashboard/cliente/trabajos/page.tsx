@@ -60,6 +60,7 @@ const urgenciaConfig: Record<string, { label: string; className: string }> = {
 }
 
 export default function ClienteTrabajos() {
+  const { logout, user } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("todos")
   
@@ -67,9 +68,9 @@ export default function ClienteTrabajos() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const user = typeof window !== "undefined"
-    ? JSON.parse(localStorage.getItem("user") || "{}")
-    : {}
+  const handleLogout = async () => {
+    await logout()
+  }
 
   const navigation = [
     { name: "Inicio", href: "/dashboard/cliente", icon: Home, current: false },
@@ -171,7 +172,7 @@ export default function ClienteTrabajos() {
                     Configuración
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Cerrar Sesión
                   </DropdownMenuItem>
