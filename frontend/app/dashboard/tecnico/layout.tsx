@@ -18,10 +18,12 @@ export const metadata: Metadata = {
   },
 }
 
+import { TechnicianOnly } from "@/components/protected-route"
+
 export default function TecnicoLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return <>{children}</>
+  return <TechnicianOnly>{children}</TechnicianOnly>
 }
