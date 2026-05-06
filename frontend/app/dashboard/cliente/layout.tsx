@@ -3,10 +3,11 @@
 import { ReactNode, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useAuth } from "@/hooks/use-auth"
 import {
   Wrench, Plus, Search, Bell, Home, FileText,
   MessageSquare, Settings, Menu, X,
-  User, Star, MoreVertical, LogOut, AlertCircle
+  User, MoreVertical, LogOut, AlertCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,10 +23,13 @@ interface ClienteLayoutProps {
 }
 
 export default function ClienteLayout({ children }: ClienteLayoutProps) {
+  const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
 
-  const user = { name: "Benjamin Bartuano", role: "Cliente" }
+  const handleLogout = async () => {
+    await logout()
+  }
 
   const navigation = [
     { name: "Inicio", href: "/dashboard/cliente", icon: Home },
@@ -37,16 +41,16 @@ export default function ClienteLayout({ children }: ClienteLayoutProps) {
   return (
     <ClientOnly>
       <div className="min-h-screen bg-slate-50 dark:bg-background font-sans">
-        
+
         {sidebarOpen && (
-          <div 
-            className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden" 
-            onClick={() => setSidebarOpen(false)} 
+          <div
+            className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
+            onClick={() => setSidebarOpen(false)}
           />
         )}
 
         <aside className={`fixed inset-y-4 left-4 z-50 w-[260px] transform rounded-2xl bg-card border shadow-xl transition-all duration-300 ease-out lg:translate-x-0 flex flex-col overflow-hidden ${sidebarOpen ? "translate-x-0" : "-translate-x-[120%]"}`}>
-          
+
           <div className="flex h-20 items-center justify-between px-6 bg-gradient-to-b from-primary/5 to-transparent border-b border-border/50">
             <Link href="/" className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
@@ -63,10 +67,14 @@ export default function ClienteLayout({ children }: ClienteLayoutProps) {
             {navigation.map((item) => {
               const isCurrent = pathname === item.href
               return (
-                <Link 
-                  key={item.name} 
+                <Link
+                  key={item.name}
                   href={item.href}
-                  className="group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary/80 hover:text-foreground transition-all duration-200"
+                  className={`group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200 ${
+                    isCurrent
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
+                  }`}
                 >
                   <item.icon className="h-5 w-5 transition-transform group-hover:scale-110" />
                   <span>{item.name}</span>
@@ -86,13 +94,13 @@ export default function ClienteLayout({ children }: ClienteLayoutProps) {
               <div className="flex items-center gap-3 overflow-hidden">
                 <Avatar className="h-10 w-10 ring-2 ring-background shrink-0">
                   <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                    {user.name.charAt(0)}
+                    {user?.name?.charAt(0) ?? "C"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="truncate text-sm font-bold text-foreground">{user.name}</p>
+                  <p className="truncate text-sm font-bold text-foreground">{user?.name ?? "Cliente"}</p>
                   <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-                    {user.role}
+                    Cliente
                   </p>
                 </div>
               </div>
@@ -120,7 +128,10 @@ export default function ClienteLayout({ children }: ClienteLayoutProps) {
                     <span>Soporte Técnico</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="my-2 bg-muted/50" />
-                  <DropdownMenuItem className="rounded-lg cursor-pointer py-2.5 text-rose-500 focus:text-rose-500 focus:bg-rose-50 dark:focus:bg-rose-500/10">
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="rounded-lg cursor-pointer py-2.5 text-rose-500 focus:text-rose-500 focus:bg-rose-50 dark:focus:bg-rose-500/10"
+                  >
                     <LogOut className="mr-2 h-4 w-4" />
                     <span className="font-bold">Cerrar Sesión</span>
                   </DropdownMenuItem>
@@ -131,7 +142,7 @@ export default function ClienteLayout({ children }: ClienteLayoutProps) {
         </aside>
 
         <div className="lg:pl-[290px] pr-4 sm:pr-6 lg:pr-8 py-4 transition-all duration-300">
-          
+
           <header className="sticky top-4 z-30 flex h-16 items-center justify-between rounded-2xl border bg-card/80 backdrop-blur-md px-4 sm:px-6 shadow-sm mb-8">
             <div className="flex items-center gap-4">
               <button className="lg:hidden bg-secondary p-2 rounded-lg text-muted-foreground" onClick={() => setSidebarOpen(true)}>

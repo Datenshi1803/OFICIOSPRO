@@ -49,7 +49,10 @@ class PaymentService
             'payment_ulid'=> $payment->ulid,
             'amount'      => $payment->amount,
             'description' => $payment->description,
-            'cclw'        => config('paguelofacil.cclw'),
+            'payment_url' => config('paguelofacil.base_url') . '/linktopay/Default/' 
+            . config('paguelofacil.cclw') . '/' 
+            . $payment->amount . '/' 
+            . urlencode($payment->description),
             'package'     => [
                 'id'      => $package->id,
                 'name'    => $package->name,

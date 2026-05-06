@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useAuth } from "@/hooks/use-auth"
 import { 
   FileText, Clock, CheckCircle2, DollarSign, 
   MapPin, Calendar, ChevronRight, Filter 
@@ -11,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-const trabajos = [
+const trabajosData = [
   {
     id: "OFP-2025-00042",
     titulo: "Mantenimiento de aire acondicionado split",
@@ -53,11 +54,8 @@ const urgenciaConfig: Record<string, { label: string; className: string }> = {
 }
 
 export default function ClientePage() {
+  const { logout } = useAuth()
   const [activeTab, setActiveTab] = useState("todos")
-  
-  const [trabajos, setTrabajos] = useState<JobData[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   const handleLogout = async () => {
     await logout()
@@ -113,7 +111,7 @@ export default function ClientePage() {
 
             <div className="p-6">
               <TabsContent value="todos" className="mt-0 space-y-4">
-                {trabajos.map((trabajo) => {
+                {trabajosData.map((trabajo) => {
                   const estado = estadoConfig[trabajo.estado]
                   const urgencia = urgenciaConfig[trabajo.urgencia]
                   return (
@@ -149,6 +147,83 @@ export default function ClientePage() {
                     </div>
                   )
                 })}
+              </TabsContent>
+
+              <TabsContent value="activos" className="mt-0 space-y-4">
+                {trabajosData.filter(t => t.estado === "PUBLICADO" || t.estado === "EN_PROGRESO").map((trabajo) => {
+                  const estado = estadoConfig[trabajo.estado]
+                  const urgencia = urgenciaConfig[trabajo.urgencia]
+                  return (
+                    <div key={trabajo.id} className="group flex flex-col gap-4 rounded-2xl border bg-card p-5 transition-all hover:shadow-md sm:flex-row sm:items-center">
+                      <div className="flex-1 space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-1 rounded-md">{trabajo.id}</span>
+                          <Badge variant={estado.variant} className="rounded-full font-bold text-[10px]">{estado.label}</Badge>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight ${urgencia.className}`}>{urgencia.label}</span>
+                        </div>
+                        <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">{trabajo.titulo}</h3>
+                        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{trabajo.zona}</span>
+                          <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" />{trabajo.fechaPublicacion}</span>
+                          <span className="flex items-center gap-1.5 font-bold text-foreground"><DollarSign className="h-3.5 w-3.5" />${trabajo.presupuesto}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between sm:justify-end gap-6 pt-4 sm:pt-0 border-t sm:border-none">
+                        {trabajo.estado === "PUBLICADO" && (
+                          <div className="text-right">
+                            <p className="text-xl font-black text-primary">{trabajo.cotizaciones}</p>
+                            <p className="text-[10px] font-bold uppercase text-muted-foreground">Ofertas</p>
+                          </div>
+                        )}
+                        <Button variant="secondary" size="sm" className="rounded-full font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all" asChild>
+                          <Link href={`/dashboard/cliente/trabajos/${trabajo.id}`}>
+                            Gestionar
+                            <ChevronRight className="ml-1 h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </TabsContent>
+
+              <TabsContent value="completados" className="mt-0 space-y-4">
+                {trabajosData.filter(t => t.estado === "COMPLETADO").length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed rounded-2xl">
+                    <CheckCircle2 className="h-8 w-8 text-muted-foreground mb-3" />
+                    <p className="text-sm text-muted-foreground">No tienes trabajos completados aún.</p>
+                  </div>
+                ) : (
+                  trabajosData.filter(t => t.estado === "COMPLETADO").map((trabajo) => {
+                    const estado = estadoConfig[trabajo.estado]
+                    const urgencia = urgenciaConfig[trabajo.urgencia]
+                    return (
+                      <div key={trabajo.id} className="group flex flex-col gap-4 rounded-2xl border bg-card p-5 transition-all hover:shadow-md sm:flex-row sm:items-center">
+                        <div className="flex-1 space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-1 rounded-md">{trabajo.id}</span>
+                            <Badge variant={estado.variant} className="rounded-full font-bold text-[10px]">{estado.label}</Badge>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight ${urgencia.className}`}>{urgencia.label}</span>
+                          </div>
+                          <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">{trabajo.titulo}</h3>
+                          <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{trabajo.zona}</span>
+                            <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" />{trabajo.fechaPublicacion}</span>
+                            <span className="flex items-center gap-1.5 font-bold text-foreground"><DollarSign className="h-3.5 w-3.5" />${trabajo.presupuesto}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-end pt-4 sm:pt-0 border-t sm:border-none">
+                          <Button variant="secondary" size="sm" className="rounded-full font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all" asChild>
+                            <Link href={`/dashboard/cliente/trabajos/${trabajo.id}`}>
+                              Gestionar
+                              <ChevronRight className="ml-1 h-4 w-4" />
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
               </TabsContent>
             </div>
           </Tabs>

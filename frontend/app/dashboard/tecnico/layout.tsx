@@ -2,22 +2,26 @@
 
 import Link from "next/link"
 import { useState } from "react"
+import { useAuth } from "@/hooks/use-auth"
 import {
   Wrench, Home, FileText, MessageSquare, User, Settings,
-  Menu, X, Bell, Search, Shield, Star, MoreVertical, LogOut, AlertCircle
+  Menu, X, Bell, Search, Star, MoreVertical, LogOut, AlertCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
 export default function TecnicoLayout({ children }: { children: React.ReactNode }) {
+  const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const user = { name: "Benjamín Bartuano", is_verified: true, reputation_score: "4.8" }
+  const handleLogout = async () => {
+    await logout()
+  }
 
   const navigation = [
     { name: "Inicio", href: "/dashboard/tecnico", icon: Home },
@@ -29,13 +33,13 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-background font-sans selection:bg-primary/20">
-      
+
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       <aside className={`fixed inset-y-4 left-4 z-50 w-[260px] transform rounded-2xl bg-card border shadow-xl transition-all duration-300 ease-out lg:translate-x-0 flex flex-col overflow-hidden ${sidebarOpen ? "translate-x-0" : "-translate-x-[120%]"}`}>
-        
+
         <div className="flex h-20 items-center justify-between px-6 bg-gradient-to-b from-primary/5 to-transparent">
           <Link href="/" className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
@@ -70,14 +74,14 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
             <div className="flex items-center gap-3 overflow-hidden">
               <Avatar className="h-10 w-10 ring-2 ring-background shrink-0">
                 <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                  {user.name.charAt(0)}
+                  {user?.name?.charAt(0) ?? "T"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="truncate text-sm font-bold text-foreground">{user.name}</p>
+                <p className="truncate text-sm font-bold text-foreground">{user?.name ?? "Técnico"}</p>
                 <p className="text-[10px] flex items-center text-muted-foreground font-medium uppercase tracking-wider">
                   <Star className="h-3 w-3 text-amber-400 mr-1 fill-amber-400" />
-                  {user.reputation_score} • Pro
+                  {user?.reputation_score ?? "0.00"} • Pro
                 </p>
               </div>
             </div>
@@ -105,7 +109,10 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
                   <span>Soporte Técnico</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="my-2 bg-muted/50" />
-                <DropdownMenuItem className="rounded-lg cursor-pointer py-2.5 text-rose-500 focus:text-rose-500 focus:bg-rose-50 dark:focus:bg-rose-500/10">
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="rounded-lg cursor-pointer py-2.5 text-rose-500 focus:text-rose-500 focus:bg-rose-50 dark:focus:bg-rose-500/10"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span className="font-bold">Cerrar Sesión</span>
                 </DropdownMenuItem>
@@ -116,7 +123,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
       </aside>
 
       <div className="lg:pl-[290px] pr-4 sm:pr-6 lg:pr-8 py-4 transition-all duration-300">
-        
+
         <header className="sticky top-4 z-30 flex h-16 items-center justify-between rounded-2xl border bg-card/80 backdrop-blur-md px-4 sm:px-6 shadow-sm mb-8">
           <div className="flex items-center gap-4">
             <button className="lg:hidden bg-secondary p-2 rounded-lg" onClick={() => setSidebarOpen(true)}>
@@ -126,7 +133,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
               Panel de Control
             </h1>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <div className="relative hidden md:block">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
