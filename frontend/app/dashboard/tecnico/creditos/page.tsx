@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
+import { API_URL } from '@/lib/api';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   AlertCircle,
@@ -38,7 +39,7 @@ export default function ComprarCreditosPage() {
   useEffect(() => {
     const fetchPackages = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bid-credit-packages`);
+        const res = await fetch(`${API_URL}/bid-credit-packages`);
         const data = await res.json();
 
         if (!res.ok) throw new Error(data.message || 'Error al cargar paquetes');
@@ -62,7 +63,7 @@ export default function ComprarCreditosPage() {
     try {
       const token = localStorage.getItem('token');
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payments/bid-credits`, {
+      const res = await fetch(`${API_URL}/payments/bid-credits`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -75,14 +76,25 @@ export default function ComprarCreditosPage() {
 
       if (!res.ok) throw new Error(data.message || 'Error al iniciar el pago');
 
-      window.location.href = data.data.payment_url;
+      // Guardar datos del pago en sessionStorage para usarlos en la pantalla del widget
+      sessionStorage.setItem('pending_payment', JSON.stringify({
+        payment_id:  data.data.payment_id,
+        amount:      data.data.amount,
+        description: data.data.description,
+        cclw:        data.data.cclw,
+        package:     data.data.package,
+      }));
+
+      // Navegar a la pantalla del widget de PagueloFácil
+      router.push('/dashboard/tecnico/creditos/pago');
+
     } catch (err: any) {
       setError(err.message);
       setSelectedPackage(null);
     } finally {
       setLoading(false);
     }
-  };
+};
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">

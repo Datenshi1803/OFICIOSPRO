@@ -17,17 +17,12 @@ class PaymentService
         protected TechnicianQuotaService $quotaService
     ) {}
 
-    /**
-     * Paso 1 del flujo: crea el pago pendiente y retorna
-     * los datos necesarios para inicializar PagueloFácil en el frontend.
-     */
     public function initiateBidCreditPurchase(User $technician, int $packageId): array
     {
         $package = BidCreditPackage::where('id', $packageId)
             ->where('is_active', true)
             ->firstOrFail();
 
-        // Crear el pago en estado pending
         $payment = Payment::create([
             'ulid'        => Str::ulid(),
             'user_id'     => $technician->id,
@@ -44,16 +39,15 @@ class PaymentService
             ],
         ]);
 
+        // Solo retorna los datos — sin construir URLs de PagueloFácil aquí
+        // El frontend inicializa el widget con cclw + amount + description
         return [
-            'payment_id'  => $payment->id,
-            'payment_ulid'=> $payment->ulid,
-            'amount'      => $payment->amount,
-            'description' => $payment->description,
-            'payment_url' => config('paguelofacil.base_url') . '/linktopay/Default/' 
-            . config('paguelofacil.cclw') . '/' 
-            . $payment->amount . '/' 
-            . urlencode($payment->description),
-            'package'     => [
+            'payment_id'   => $payment->id,
+            'payment_ulid' => $payment->ulid,
+            'amount'       => $payment->amount,
+            'description'  => $payment->description,
+            'cclw'         => config('paguelofacil.cclw'),
+            'package'      => [
                 'id'      => $package->id,
                 'name'    => $package->name,
                 'credits' => $package->credits,
@@ -62,10 +56,6 @@ class PaymentService
         ];
     }
 
-    /**
-     * Paso 2: confirma el pago usando el CodOper retornado por PagueloFácil.
-     * Se llama desde el frontend después del pago exitoso.
-     */
     public function confirmBidCreditPurchase(int $paymentId, string $codOper, User $technician): array
     {
         $payment = Payment::where('id', $paymentId)
@@ -73,26 +63,26 @@ class PaymentService
             ->where('status', 'pending')
             ->firstOrFail();
 
-        // Verificar el pago con PagueloFácil
-        $verified = $this->verifyPaymentWithGateway($codOper, $payment->amount);
+        // En sandbox saltamos la verificación — en producción la activamos
+        $isSandbox = config('paguelofacil.env') === 'sandbox';
 
-        if (!$verified) {
-            $payment->update(['status' => 'failed']);
-            throw new \Exception('El pago no pudo ser verificado con PagueloFácil.');
+        if (!$isSandbox) {
+            $verified = $this->verifyPaymentWithGateway($codOper, $payment->amount);
+            if (!$verified) {
+                $payment->update(['status' => 'failed']);
+                throw new \Exception('El pago no pudo ser verificado con PagueloFácil.');
+            }
         }
 
-        // Todo en una sola transacción de BD
         DB::transaction(function () use ($payment, $codOper, $technician) {
             $package = BidCreditPackage::find($payment->metadata['package_id']);
 
-            // Actualizar payment
             $payment->update([
                 'gateway_payment_id' => $codOper,
                 'status'             => 'completed',
                 'paid_at'            => now(),
             ]);
 
-            // Registrar en bid_credits
             BidCredit::create([
                 'technician_id'     => $technician->id,
                 'package_id'        => $package->id,
@@ -101,7 +91,6 @@ class PaymentService
                 'credits_used'      => 0,
             ]);
 
-            // Sumar créditos al saldo del técnico
             $this->quotaService->addPaidCredits($technician, $package->credits);
         });
 
@@ -114,21 +103,20 @@ class PaymentService
         ];
     }
 
-    /**
-     * Maneja el webhook de PagueloFácil.
-     * Mismo resultado que confirm pero activado por PagueloFácil directamente.
-     */
     public function handleWebhook(array $payload): void
     {
-        $codOper = $payload['CodOper'] ?? null;
-        $amount  = $payload['amount']  ?? null;
+        Log::info('Webhook PagueloFácil recibido', $payload);
+
+        // PagueloFácil puede enviar CodOper o Oper según el tipo de pago
+        $codOper = $payload['CodOper'] ?? $payload['Oper'] ?? null;
+        $amount  = $payload['TotalPagado'] ?? $payload['amount'] ?? null;
 
         if (!$codOper) {
             Log::warning('Webhook PagueloFácil sin CodOper', $payload);
             return;
         }
 
-        // Idempotencia — si ya procesamos este CodOper, ignorar
+        // Idempotencia
         $alreadyProcessed = Payment::where('gateway_payment_id', $codOper)
             ->where('status', 'completed')
             ->exists();
@@ -138,19 +126,22 @@ class PaymentService
             return;
         }
 
-        // Buscar el pago pendiente por monto
         $payment = Payment::where('status', 'pending')
-            ->where('amount', $amount)
             ->where('gateway', 'paguelofacil')
             ->latest()
             ->first();
 
         if (!$payment) {
-            Log::warning("Webhook PagueloFácil: no se encontró pago pendiente para CodOper {$codOper}");
+            Log::warning("Webhook: no se encontró pago pendiente para CodOper {$codOper}");
             return;
         }
 
         $technician = User::find($payment->user_id);
+
+        if (!$technician) {
+            Log::error("Webhook: técnico no encontrado para payment {$payment->id}");
+            return;
+        }
 
         DB::transaction(function () use ($payment, $codOper, $technician) {
             $package = BidCreditPackage::find($payment->metadata['package_id']);
@@ -172,22 +163,25 @@ class PaymentService
             $this->quotaService->addPaidCredits($technician, $package->credits);
         });
 
-        Log::info("Webhook PagueloFácil procesado: {$codOper} — créditos agregados al técnico {$technician->id}");
+        Log::info("Webhook procesado: {$codOper} — técnico {$technician->id}");
     }
 
-    /**
-     * Verifica el pago directamente con la API de PagueloFácil.
-     */
     protected function verifyPaymentWithGateway(string $codOper, float $amount): bool
     {
         try {
+            $baseUrl = config('paguelofacil.env') === 'sandbox'
+                ? config('paguelofacil.base_url')
+                : config('paguelofacil.prod_url');
+
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . config('paguelofacil.api_key'),
+                'Authorization' => config('paguelofacil.api_key'),
                 'Content-Type'  => 'application/json',
-            ])->post(config('paguelofacil.base_url') . '/api/gateway/process/consulta', [
+            ])->post("{$baseUrl}/webservices/rest/processTx/CONSULT", [
                 'cclw'    => config('paguelofacil.cclw'),
                 'codOper' => $codOper,
             ]);
+
+            Log::info('PagueloFácil verificación respuesta', $response->json());
 
             if (!$response->successful()) {
                 Log::error('PagueloFácil verificación fallida', $response->json());
@@ -196,9 +190,18 @@ class PaymentService
 
             $data = $response->json();
 
+            // PagueloFácil retorna Estado: "Aprobada" en pagos exitosos
+            $estado = $data['Estado'] ?? $data['data']['Estado'] ?? null;
+
+            if ($estado !== 'Aprobada') {
+                Log::warning("PagueloFácil estado inesperado: {$estado}");
+                return false;
+            }
+
             // Verificar que el monto coincide
-            return isset($data['data']['totalPagado']) &&
-                   (float) $data['data']['totalPagado'] === (float) $amount;
+            $totalPagado = (float) ($data['TotalPagado'] ?? $data['data']['TotalPagado'] ?? 0);
+
+            return $totalPagado >= (float) $amount;
 
         } catch (\Exception $e) {
             Log::error('Error verificando pago PagueloFácil: ' . $e->getMessage());

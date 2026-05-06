@@ -29,6 +29,11 @@ export default function PagueloFacilWidget({
 
     script.onload = () => {
       // @ts-ignore
+      if (!window.PF) {
+        onError('Widget PagueloFácil no se inicializó correctamente');
+        return;
+      }
+      // @ts-ignore
       window.PF.init({
         cclw,
         amount,
@@ -44,12 +49,16 @@ export default function PagueloFacilWidget({
       });
     };
 
+    script.onerror = () => {
+      onError('No se pudo cargar el widget de PagueloFácil. Intenta más tarde.');
+    };
+
     return () => {
       if (document.body.contains(script)) {
         document.body.removeChild(script);
       }
     };
-  }, []);
+  }, [cclw, amount, description, onSuccess, onError]);
 
   return (
     <div id="paguelofacil-container" className="w-full min-h-[300px]" />
