@@ -1,348 +1,204 @@
 "use client"
 
-import Link from "next/link"
 import { useState, useEffect } from "react"
-import { useAuth } from "@/hooks/use-auth"
-import {
-  Wrench,
-  Plus,
-  Search,
-  Bell,
-  User,
-  LogOut,
-  Home,
-  FileText,
-  MessageSquare,
-  Settings,
-  Menu,
-  X,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  Star,
-  ChevronRight,
-  MapPin,
-  Calendar,
-  DollarSign,
-  Filter,
-  MoreVertical,
-  Loader2,
+import Link from "next/link"
+import { 
+  FileText, Clock, CheckCircle2, DollarSign, 
+  MapPin, Calendar, ChevronRight, Filter, Loader2 
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getClientJobs, JobData } from "@/lib/api"
 
-const estadoConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
-  published: { label: "Publicado", variant: "default", icon: Clock },
-  in_progress: { label: "En Progreso", variant: "secondary", icon: AlertCircle },
-  completed: { label: "Completado", variant: "outline", icon: CheckCircle2 },
-  reviewed: { label: "Reseñado", variant: "default", icon: Star },
-  cancelled: { label: "Cancelado", variant: "destructive", icon: X },
+const estadoConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  published: { label: "Publicado", variant: "default" },
+  in_progress: { label: "En Progreso", variant: "secondary" },
+  completed: { label: "Completado", variant: "outline" },
+  cancelled: { label: "Cancelado", variant: "destructive" },
+  reviewed: { label: "Reseñado", variant: "default" },
 }
 
 const urgenciaConfig: Record<string, { label: string; className: string }> = {
-  normal: { label: "Normal", className: "bg-muted text-muted-foreground" },
-  urgent: { label: "Urgente", className: "bg-warning/20 text-warning-foreground" },
-  emergency: { label: "Emergencia", className: "bg-destructive/20 text-destructive" },
+  normal: { label: "Normal", className: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400" },
+  urgente: { label: "Urgente", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-500" },
+  emergencia: { label: "Emergencia", className: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-500" },
 }
 
-export default function ClienteDashboard() {
-  const { logout, user } = useAuth()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+export default function ClientePage() {
   const [activeTab, setActiveTab] = useState("todos")
-  
-  const [trabajos, setTrabajos] = useState<JobData[]>([])
+  const [trabajosData, setTrabajosData] = useState<JobData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const handleLogout = async () => {
-    await logout()
-  }
-
-  const navigation = [
-    { name: "Inicio", href: "/dashboard/cliente", icon: Home, current: true },
-    { name: "Mis Trabajos", href: "/dashboard/cliente/trabajos", icon: FileText, current: false },
-    { name: "Mensajes", href: "/dashboard/cliente/mensajes", icon: MessageSquare, current: false, badge: 2 },
-    { name: "Configuración", href: "/dashboard/cliente/configuracion", icon: Settings, current: false },
-  ]
-
   useEffect(() => {
-    async function loadData() {
+    let isMounted = true
+
+    async function loadTrabajos() {
       setLoading(true)
       setError(null)
+
       try {
-        const res = await getClientJobs()
-        setTrabajos(res.data)
-      } catch (err: any) {
-        setError(err.message || "Error al cargar datos")
+        const response = await getClientJobs()
+        if (isMounted) {
+          setTrabajosData(response.data ?? [])
+        }
+      } catch (err) {
+        if (!isMounted) return
+        setError(err instanceof Error ? err.message : "Error al cargar los trabajos")
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
-    loadData()
+
+    loadTrabajos()
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
-  const activeJobs = trabajos.filter(t => t.status === "published" || t.status === "in_progress")
-  const completedJobs = trabajos.filter(t => t.status === "completed" || t.status === "reviewed")
+  const normalizeStatus = (status: string | undefined) => status?.toLowerCase() ?? ""
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-foreground/20 lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
+  const trabajosActivos = trabajosData.filter((trabajo) => {
+    const status = normalizeStatus(trabajo.status)
+    return status === "published" || status === "in_progress"
+  })
 
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-sidebar transition-transform duration-200 ease-in-out lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex h-full flex-col">
-          {/* Logo */}
-          <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-6">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary">
-                <Wrench className="h-5 w-5 text-sidebar-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold text-sidebar-foreground">OficiosPro</span>
-            </Link>
-            <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
-              <X className="h-6 w-6 text-sidebar-foreground" />
-            </button>
-          </div>
+  const trabajosCompletados = trabajosData.filter((trabajo) => {
+    const status = normalizeStatus(trabajo.status)
+    return status === "completed" || status === "reviewed"
+  })
 
-          {/* Navigation */}
-          <nav className="flex-1 space-y-1 p-4">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  item.current
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                }`}
-              >
-                <item.icon className="h-5 w-5" />
-                <span>{item.name}</span>
-                {item.badge && (
-                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-sidebar-primary text-xs text-sidebar-primary-foreground">
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            ))}
-          </nav>
+  const getTrabajosByTab = (tab: string) => {
+    if (tab === "activos") return trabajosActivos
+    if (tab === "completados") return trabajosCompletados
+    return trabajosData
+  }
 
-          {/* User Section */}
-          <div className="border-t border-sidebar-border p-4">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={user?.avatar_url || ""} />
-                <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground">
-                  {user?.name?.charAt(0) || "C"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 overflow-hidden">
-                <p className="truncate text-sm font-medium text-sidebar-foreground">{user?.name || "Cliente"}</p>
-                <p className="truncate text-xs text-sidebar-foreground/60">Cliente</p>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-sidebar-foreground hover:bg-sidebar-accent">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <User className="mr-2 h-4 w-4" />
-                    Perfil
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configuración
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Cerrar Sesión
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+  const totalCotizaciones = trabajosData.reduce((sum, trabajo) => sum + (trabajo.bids_count ?? 0), 0)
+
+  const stats = [
+    { label: "Trabajos Activos", value: trabajosActivos.length.toString(), icon: FileText, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20" },
+    { label: "Cotizaciones", value: totalCotizaciones.toString(), icon: Clock, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-900/20" },
+    { label: "Completados", value: trabajosCompletados.length.toString(), icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
+    { label: "Total Gastado", value: "$1,250", icon: DollarSign, color: "text-slate-600", bg: "bg-slate-100 dark:bg-slate-800" },
+  ]
+
+  const renderTrabajos = (trabajos: JobData[]) => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      )
+    }
+
+    if (trabajos.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed rounded-2xl">
+          <CheckCircle2 className="h-8 w-8 text-muted-foreground mb-3" />
+          <p className="text-sm text-muted-foreground">No tienes trabajos en esta sección aún.</p>
+        </div>
+      )
+    }
+
+    return trabajos.map((trabajo) => {
+      const statusKey = normalizeStatus(trabajo.status)
+      const estado = estadoConfig[statusKey] ?? { label: trabajo.status, variant: "outline" }
+      const urgencia = urgenciaConfig[trabajo.urgency] ?? urgenciaConfig.normal
+
+      return (
+        <div key={trabajo.id} className="group flex flex-col gap-4 rounded-2xl border bg-card p-5 transition-all hover:shadow-md sm:flex-row sm:items-center">
+          <div className="flex-1 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-1 rounded-md">{trabajo.code || trabajo.id}</span>
+              <Badge variant={estado.variant} className="rounded-full font-bold text-[10px]">{estado.label}</Badge>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight ${urgencia.className}`}>{urgencia.label}</span>
             </div>
+            <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">{trabajo.title}</h3>
+            <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{trabajo.zone}</span>
+              <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" />{new Date(trabajo.created_at).toLocaleDateString()}</span>
+              <span className="flex items-center gap-1.5 font-bold text-foreground"><DollarSign className="h-3.5 w-3.5" />{trabajo.budget ? `$${trabajo.budget}` : "Sin presupuesto"}</span>
+              <span className="flex items-center gap-1.5 text-slate-500">{trabajo.bids_count ?? 0} cotizaciones</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-6 pt-4 sm:pt-0 border-t sm:border-none">
+            <Button variant="secondary" size="sm" className="rounded-full font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all" asChild>
+              <Link href={`/dashboard/cliente/trabajos/${trabajo.id}`}>
+                Gestionar
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
           </div>
         </div>
-      </aside>
+      )
+    })
+  }
 
-      {/* Main Content */}
-      <div className="lg:pl-64">
-        {/* Top Header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card px-4 sm:px-6">
-          <div className="flex items-center gap-4">
-            <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-              <Menu className="h-6 w-6 text-foreground" />
-            </button>
-            <div className="hidden sm:block">
-              <h1 className="text-lg font-semibold text-foreground">Dashboard</h1>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden md:block">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder="Buscar..." className="w-64 pl-10" />
+  return (
+    <>
+      {/* Resumen de Estadísticas */}
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <Card key={stat.label} className="border-none shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} ${stat.color}`}>
+                <stat.icon className="h-6 w-6" />
               </div>
-            </div>
-
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
-                3
-              </span>
-            </Button>
-
-            <Button size="sm" className="hidden gap-2 sm:flex" asChild>
-              <Link href="/dashboard/cliente/nuevo-trabajo">
-                <Plus className="h-4 w-4" />
-                Nuevo Trabajo
-              </Link>
-            </Button>
-          </div>
-        </header>
-
-        {/* Page Content */}
-        <main className="p-4 sm:p-6">
-          {error && (
-            <div className="mb-6 rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-
-          {/* Stats Cards */}
-          <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { label: "Trabajos Activos", value: activeJobs.length.toString(), icon: FileText, color: "text-primary" },
-              { label: "Cotizaciones Recibidas", value: "-", icon: Clock, color: "text-warning" },
-              { label: "Trabajos Completados", value: completedJobs.length.toString(), icon: CheckCircle2, color: "text-accent" },
-              { label: "Total Gastado", value: "-", icon: DollarSign, color: "text-muted-foreground" },
-            ].map((stat) => (
-              <Card key={stat.label}>
-                <CardContent className="flex items-center gap-4 p-4 sm:p-6">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-muted ${stat.color}`}>
-                    <stat.icon className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Recent Jobs */}
-          <Card>
-            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle>Mis Trabajos</CardTitle>
-                <CardDescription>Resumen de tus trabajos recientes</CardDescription>
+                <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
+                <p className="text-2xl font-bold text-foreground">{stat.value}</p>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/dashboard/cliente/trabajos">
-                    Ver Todos
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex items-center justify-center py-16">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : trabajos.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                    <FileText className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <h3 className="mb-2 text-lg font-medium text-foreground">No tienes trabajos</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Crea tu primer trabajo para empezar</p>
-                  <Button asChild>
-                    <Link href="/dashboard/cliente/nuevo-trabajo">
-                      Crear Trabajo
-                    </Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {trabajos.slice(0, 5).map((trabajo) => {
-                    const estado = estadoConfig[trabajo.status] || { label: trabajo.status, variant: "outline", icon: Clock }
-                    const urgencia = urgenciaConfig[trabajo.urgency] || urgenciaConfig.normal
-                    return (
-                      <div
-                        key={trabajo.id}
-                        className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="flex-1 space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-mono text-xs text-muted-foreground">{trabajo.code}</span>
-                            <Badge variant={estado.variant as any} className="gap-1">
-                              <estado.icon className="h-3 w-3" />
-                              {estado.label}
-                            </Badge>
-                            <span className={`rounded-full px-2 py-0.5 text-xs ${urgencia.className}`}>
-                              {urgencia.label}
-                            </span>
-                          </div>
-                          <h3 className="font-medium text-foreground">{trabajo.title}</h3>
-                          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-4 w-4" />
-                              {trabajo.zone}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              {new Date(trabajo.created_at).toLocaleDateString()}
-                            </span>
-                            {trabajo.budget && (
-                              <span className="flex items-center gap-1">
-                                <DollarSign className="h-4 w-4" />
-                                ${trabajo.budget}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <Button variant="outline" size="sm" className="gap-1" asChild>
-                            <Link href={`/dashboard/cliente/trabajos/${trabajo.id}`}>
-                              Ver Detalle
-                              <ChevronRight className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
             </CardContent>
           </Card>
-        </main>
+        ))}
       </div>
-    </div>
+
+      {/* Listado de Trabajos Recientes */}
+      <Card className="border-none shadow-sm overflow-hidden rounded-2xl">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card">
+          <div>
+            <CardTitle className="text-xl font-bold text-foreground">Mis Trabajos Recientes</CardTitle>
+            <CardDescription>Gestiona tus solicitudes en curso</CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="rounded-full gap-2">
+              <Filter className="h-4 w-4" />
+              Filtrar
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="px-6 border-b">
+              <TabsList className="bg-transparent gap-6 h-12">
+                <TabsTrigger value="todos" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0">Todos</TabsTrigger>
+                <TabsTrigger value="activos" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0">Activos</TabsTrigger>
+                <TabsTrigger value="completados" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0">Completados</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="p-6">
+              <TabsContent value="todos" className="mt-0 space-y-4">
+                {renderTrabajos(getTrabajosByTab("todos"))}
+              </TabsContent>
+
+              <TabsContent value="activos" className="mt-0 space-y-4">
+                {renderTrabajos(getTrabajosByTab("activos"))}
+              </TabsContent>
+
+              <TabsContent value="completados" className="mt-0 space-y-4">
+                {renderTrabajos(getTrabajosByTab("completados"))}
+              </TabsContent>
+            </div>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </>
   )
 }

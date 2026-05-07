@@ -13,6 +13,10 @@ return [
     | a conventional file to locate the various service credentials.
     |
     */
+    'paguelofacil' => [
+    'env'  => env('PAGUELOFACIL_ENV', 'sandbox'),
+    'cclw' => env('PAGUELOFACIL_CCLW'),
+    ],
 
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),

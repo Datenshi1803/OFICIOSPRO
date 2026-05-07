@@ -9,6 +9,7 @@ use App\Services\PaymentService;
 use App\Services\TechnicianQuotaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class PaymentController extends Controller
 {
@@ -19,7 +20,6 @@ class PaymentController extends Controller
 
     /**
      * GET /api/bid-credit-packages
-     * Lista los paquetes disponibles para compra.
      */
     public function packages(): JsonResponse
     {
@@ -32,7 +32,6 @@ class PaymentController extends Controller
 
     /**
      * GET /api/me/quota
-     * Retorna la cuota actual del técnico autenticado.
      */
     public function quota(Request $request): JsonResponse
     {
@@ -54,7 +53,7 @@ class PaymentController extends Controller
 
     /**
      * POST /api/payments/bid-credits
-     * Inicia la compra de un paquete de créditos.
+     * Inicia la compra — crea el Payment en BD y devuelve los datos al frontend.
      */
     public function initiate(InitiatePaymentRequest $request): JsonResponse
     {
@@ -67,8 +66,59 @@ class PaymentController extends Controller
     }
 
     /**
+     * POST /api/payments/create-link
+     * Llama a PagueloFácil para obtener la URL de checkout de un solo uso.
+     * El frontend redirige al usuario a esa URL.
+     */
+    public function createLink(Request $request): JsonResponse
+    {
+        $request->validate(['payment_id' => 'required|integer']);
+
+        $payment = \App\Models\Payment::where('id', $request->payment_id)
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'pending')
+            ->firstOrFail();
+
+        $isSandbox = config('services.paguelofacil.env') === 'sandbox';
+
+        $endpoint = $isSandbox
+            ? 'https://sandbox.paguelofacil.com/LinkDeamon.cfm'
+            : 'https://secure.paguelofacil.com/LinkDeamon.cfm';
+
+        // RETURN_URL debe ir codificada en hexadecimal (requisito de PagueloFácil)
+        $returnUrl    = config('app.frontend_url') . '/dashboard/tecnico/creditos/retorno';
+        $returnUrlHex = bin2hex($returnUrl);
+
+        $response = Http::asForm()->post($endpoint, [
+            'CCLW'       => config('services.paguelofacil.cclw'),
+            'CMTN'       => number_format($payment->amount, 2, '.', ''),
+            'CDSC'       => $payment->description,
+            'RETURN_URL' => $returnUrlHex,
+            'PARM_1'     => $payment->id,   // lo devuelve PF en el retorno para trazabilidad
+        ]);
+
+        $body = $response->json();
+
+        if (! $response->successful() || empty($body['data']['url'])) {
+            \Log::error('PagueloFácil createLink falló', [
+                'status' => $response->status(),
+                'body'   => $body,
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo generar el enlace de pago. Intenta nuevamente.',
+            ], 502);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => ['url' => $body['data']['url']],
+        ]);
+    }
+
+    /**
      * POST /api/payments/confirm
-     * Confirma el pago con el CodOper retornado por PagueloFácil.
+     * Confirma el pago con el Oper retornado por PagueloFácil.
      */
     public function confirm(ConfirmPaymentRequest $request): JsonResponse
     {
@@ -83,7 +133,6 @@ class PaymentController extends Controller
 
     /**
      * GET /api/me/payments
-     * Historial de pagos del técnico autenticado.
      */
     public function history(Request $request): JsonResponse
     {
