@@ -16,6 +16,7 @@ import {
   Filter,
   Loader2,
   Briefcase,
+  FileText,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -216,6 +217,11 @@ export default function ClienteTrabajos() {
                                       Presupuesto: ${trabajo.budget}
                                     </span>
                                   )}
+
+                                  <span className="flex items-center gap-1">
+                                    <FileText className="h-4 w-4" />
+                                    {trabajo.bids_count ?? 0} cotizaciones
+                                  </span>
                                 </div>
                               </div>
 

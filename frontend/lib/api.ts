@@ -262,6 +262,7 @@ export interface JobData {
   budget: string | null
   status: string
   created_at: string
+  bids_count?: number
   category?: { id: number; name: string }
   client?: {
     name: string

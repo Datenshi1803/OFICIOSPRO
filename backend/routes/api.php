@@ -37,6 +37,7 @@ Route::post('/webhooks/paguelofacil', [WebhookController::class, 'paguelofacil']
 Route::get('/bid-credit-packages', [PaymentController::class, 'packages'])
     ->name('bid-credit-packages.index');
 
+
 // Rutas autenticadas
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me/quota',    [PaymentController::class, 'quota'])->name('quota.show');
@@ -44,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/payments/bid-credits', [PaymentController::class, 'initiate'])->name('payments.initiate');
     Route::post('/payments/confirm',     [PaymentController::class, 'confirm'])->name('payments.confirm');
+    Route::post('/payments/create-link', [PaymentController::class, 'createLink'])->name('payments.createLink');
     });
 
 Route::middleware('auth')->group(function () {

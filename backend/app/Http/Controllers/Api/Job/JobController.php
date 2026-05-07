@@ -46,6 +46,7 @@ class JobController extends Controller
     public function clientJobs()
     {
         $jobs = Job::with(['client', 'category', 'technician'])
+            ->withCount('bids')
             ->where('client_id', auth()->id())
             ->latest()
             ->get();
