@@ -25,11 +25,22 @@ class PaymentController extends Controller
     {
         $packages = \App\Models\BidCreditPackage::where('is_active', true)
             ->orderBy('sort_order')
-            ->get();
+            ->get()
+            ->map(fn($pkg) => [
+                'id'          => $pkg->id,
+                'name'        => $pkg->name,
+                'slug'        => $pkg->slug,
+                'credits'     => $pkg->credits,
+                'price'       => $pkg->price,
+                'subtitle'    => $pkg->subtitle,
+                'badge_text'  => $pkg->badge_text,
+                'description' => $pkg->description,
+                'features'    => $pkg->features ?? [],
+                'is_featured' => $pkg->is_featured,
+            ]);
 
         return response()->json(['data' => $packages]);
     }
-
     /**
      * GET /api/me/quota
      */
@@ -70,51 +81,72 @@ class PaymentController extends Controller
      * Llama a PagueloFácil para obtener la URL de checkout de un solo uso.
      * El frontend redirige al usuario a esa URL.
      */
-    public function createLink(Request $request): JsonResponse
-    {
-        $request->validate(['payment_id' => 'required|integer']);
+   public function createLink(Request $request): JsonResponse
+{
+    $request->validate(['payment_id' => 'required|integer']);
 
-        $payment = \App\Models\Payment::where('id', $request->payment_id)
-            ->where('user_id', $request->user()->id)
-            ->where('status', 'pending')
-            ->firstOrFail();
+    $payment = \App\Models\Payment::where('id', $request->payment_id)
+        ->where('user_id', $request->user()->id)
+        ->where('status', 'pending')
+        ->firstOrFail();
 
-        $isSandbox = config('services.paguelofacil.env') === 'sandbox';
+    $isSandbox = config('services.paguelofacil.env') === 'sandbox';
+    $endpoint  = $isSandbox
+        ? 'https://sandbox.paguelofacil.com/LinkDeamon.cfm'
+        : 'https://secure.paguelofacil.com/LinkDeamon.cfm';
 
-        $endpoint = $isSandbox
-            ? 'https://sandbox.paguelofacil.com/LinkDeamon.cfm'
-            : 'https://secure.paguelofacil.com/LinkDeamon.cfm';
+    $returnUrl    = config('app.frontend_url') . '/dashboard/tecnico/creditos/retorno';
+    $returnUrlHex = bin2hex($returnUrl);
 
-        // RETURN_URL debe ir codificada en hexadecimal (requisito de PagueloFácil)
-        $returnUrl    = config('app.frontend_url') . '/dashboard/tecnico/creditos/retorno';
-        $returnUrlHex = bin2hex($returnUrl);
+    // ✅ Construir el postR manualmente como lo hace PagueloFácil
+    $data = [
+        'CCLW'       => config('services.paguelofacil.cclw'),
+        'CMTN'       => number_format($payment->amount, 2, '.', ''),
+        'CDSC'       => $payment->description,
+        'RETURN_URL' => $returnUrlHex,
+        'PARM_1'     => (string) $payment->id,
+        'EXPIRES_IN' => 3600,  // ← te faltaba este campo
+    ];
 
-        $response = Http::asForm()->post($endpoint, [
-            'CCLW'       => config('services.paguelofacil.cclw'),
-            'CMTN'       => number_format($payment->amount, 2, '.', ''),
-            'CDSC'       => $payment->description,
-            'RETURN_URL' => $returnUrlHex,
-            'PARM_1'     => $payment->id,   // lo devuelve PF en el retorno para trazabilidad
-        ]);
-
-        $body = $response->json();
-
-        if (! $response->successful() || empty($body['data']['url'])) {
-            \Log::error('PagueloFácil createLink falló', [
-                'status' => $response->status(),
-                'body'   => $body,
-            ]);
-            return response()->json([
-                'success' => false,
-                'message' => 'No se pudo generar el enlace de pago. Intenta nuevamente.',
-            ], 502);
-        }
-
-        return response()->json([
-            'success' => true,
-            'data'    => ['url' => $body['data']['url']],
-        ]);
+    // Construir query string manualmente (igual que el ejemplo oficial)
+    $postR = '';
+    foreach ($data as $mk => $mv) {
+        $postR .= "&{$mk}={$mv}";
     }
+
+    $response = Http::withHeaders([
+        'Content-Type' => 'application/x-www-form-urlencoded',
+        'Accept'       => '*/*',
+    ])
+    ->withOptions([
+        'allow_redirects' => false, // ✅ CRÍTICO: evita que Laravel siga el redirect
+    ])
+    ->send('POST', $endpoint, ['body' => $postR]);
+
+    \Log::info('PagueloFácil raw response', [
+        'status'  => $response->status(),
+        'headers' => $response->headers(),
+        'body'    => $response->body(),   // ← así ves exactamente qué devuelve
+    ]);
+
+    $body = $response->json();
+
+    if (! $response->successful() || empty($body['data']['url'])) {
+        \Log::error('PagueloFácil createLink falló', [
+            'status' => $response->status(),
+            'body'   => $body,
+        ]);
+        return response()->json([
+            'success' => false,
+            'message' => 'No se pudo generar el enlace de pago. Intenta nuevamente.',
+        ], 502);
+    }
+
+    return response()->json([
+        'success' => true,
+        'data'    => ['url' => $body['data']['url']],
+    ]);
+}   
 
     /**
      * POST /api/payments/confirm
