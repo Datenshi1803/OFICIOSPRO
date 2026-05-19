@@ -112,4 +112,103 @@ class JobController extends Controller
     {
         //
     }
+
+    /**
+ * POST /api/client/trabajos/{job}/aceptar-cotizacion
+ * Cliente acepta una cotización — asigna el trabajo al técnico
+ */
+public function acceptBid(Request $request, Job $job)
+{
+    // Verificar que el trabajo pertenece al cliente autenticado
+    if ($job->client_id !== auth()->id()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'No tienes permiso para modificar este trabajo.',
+        ], 403);
+    }
+
+    // Verificar que el trabajo está en estado válido para aceptar
+    if ($job->status !== 'published') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Este trabajo ya no acepta cotizaciones.',
+        ], 422);
+    }
+
+    $validated = $request->validate([
+        'bid_id' => 'required|integer|exists:bids,id',
+    ]);
+
+    // Verificar que la cotización pertenece a este trabajo
+    $bid = \App\Models\Bid::where('id', $validated['bid_id'])
+        ->where('job_id', $job->id)
+        ->where('status', 'pending')
+        ->first();
+
+    if (!$bid) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Cotización no válida para este trabajo.',
+        ], 404);
+    }
+
+    // Todo en una transacción
+    \Illuminate\Support\Facades\DB::transaction(function () use ($job, $bid) {
+        // Actualizar el trabajo
+        $job->update([
+            'status'          => 'in_progress',
+            'technician_id'   => $bid->technician_id,
+            'accepted_bid_id' => $bid->id,
+        ]);
+
+        // Marcar la cotización aceptada
+        $bid->update(['status' => 'accepted']);
+
+        // Rechazar todas las demás cotizaciones del mismo trabajo
+        \App\Models\Bid::where('job_id', $job->id)
+            ->where('id', '!=', $bid->id)
+            ->update(['status' => 'rejected']);
+    });
+
+    // Cargar relaciones para la respuesta
+    $job->load(['technician', 'category', 'bids.technician']);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Cotización aceptada. El trabajo ha sido asignado al técnico.',
+        'data'    => $job,
+    ]);
+}
+
+/**
+ * PATCH /api/client/trabajos/{job}/completar
+ * Cliente confirma que el trabajo fue completado
+ */
+public function markCompleted(Request $request, Job $job)
+{
+    if ($job->client_id !== auth()->id()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'No tienes permiso para modificar este trabajo.',
+        ], 403);
+    }
+
+    if ($job->status !== 'in_progress') {
+        return response()->json([
+            'success' => false,
+            'message' => 'El trabajo no está en progreso.',
+        ], 422);
+    }
+
+    $job->update([
+        'status'       => 'completed',
+        'completed_at' => now(),
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Trabajo marcado como completado.',
+        'data'    => $job,
+    ]);
+}
 }

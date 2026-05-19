@@ -68,13 +68,16 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/profile', [AuthController::class, 'profile']);
         Route::put('/profile', [AuthController::class, 'updateProfile']);
+
+        // Rutas específicas PRIMERO
+        Route::post('/trabajos/{job}/aceptar-cotizacion', [JobController::class, 'acceptBid']);
+        Route::patch('/trabajos/{job}/completar', [JobController::class, 'markCompleted']);
+
+        // Rutas genéricas DESPUÉS
         Route::post('/trabajos', [JobController::class, 'store']);
         Route::get('/trabajos', [JobController::class, 'clientJobs']);
-
-         // ── Cotizaciones (vista del cliente) ──────────────────────────────────
-        // Ver todas las cotizaciones de uno de sus trabajos
         Route::get('/trabajos/{job}/cotizaciones', [BidController::class, 'index']);
-    });
+});
 
     // -------------------------------------------------------
     // RUTAS EXCLUSIVAS PARA TÉCNICOS
