@@ -20,7 +20,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
@@ -31,7 +30,9 @@ import {
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { TrendingUp } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { useQuota } from "@/hooks/use-quota"
 import { getAvailableJobs, getMyBids, storeBid, JobData, BidData } from "@/lib/api"
@@ -65,7 +66,8 @@ const estadoBidConfig: Record<string, { label: string; variant: "default" | "sec
 
 export default function TecnicoDashboard() {
   const { user } = useAuth()
-  const { loading: loadingQuota, quotaMessage, checkAndBid } = useQuota()
+  const router = useRouter()
+  const { loading: loadingQuota, quotaMessage, checkAndBid, quota } = useQuota()
 
   const [activeTab, setActiveTab] = useState("disponibles")
   const [trabajos, setTrabajos] = useState<JobData[]>([])
@@ -353,21 +355,44 @@ export default function TecnicoDashboard() {
                             </div>
                           </div>
 
-                          <div className="flex min-w-[160px] flex-col items-start justify-between gap-4 pt-4 sm:items-end lg:border-l lg:pl-6 lg:pt-0">
+                          {/* ✅ Botones según estado de créditos */}
+                          <div className="flex min-w-[160px] flex-col items-start justify-between gap-3 pt-4 sm:items-end lg:border-l lg:pl-6 lg:pt-0">
                             <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                               <Calendar className="h-3.5 w-3.5" />
                               {new Date(trabajo.created_at).toLocaleDateString()}
                             </span>
 
                             <div className="w-full space-y-2">
-                              <Button
-                                className="w-full rounded-xl font-semibold"
-                                disabled={!isVerified || yaCotice || loadingQuota}
-                                onClick={() => handleCotizar(trabajo)}
-                              >
-                                {yaCotice ? "Oferta enviada" : "Cotizar ahora"}
-                              </Button>
+                              {yaCotice ? (
+                                // Ya envió cotización a este trabajo
+                                <Button className="w-full rounded-xl font-semibold" disabled>
+                                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                                  Oferta enviada
+                                </Button>
+                              ) : quota?.can_bid ? (
+                                // Tiene créditos — puede cotizar
+                                <Button
+                                  className="w-full rounded-xl font-semibold"
+                                  disabled={!isVerified || loadingQuota}
+                                  onClick={() => handleCotizar(trabajo)}
+                                >
+                                  <Send className="mr-2 h-4 w-4" />
+                                  Cotizar ahora
+                                </Button>
+                              ) : (
+                                // Sin créditos — lleva a comprar
+                                <Button
+                                  className="w-full rounded-xl font-semibold"
+                                  variant="outline"
+                                  disabled={loadingQuota}
+                                  onClick={() => router.push('/dashboard/tecnico/creditos')}
+                                >
+                                  <Zap className="mr-2 h-4 w-4 text-primary" />
+                                  Comprar créditos
+                                </Button>
+                              )}
 
+                              {/* Mensaje informativo de cuota */}
                               {!yaCotice && quotaMessage() && (
                                 <p className="text-right text-xs text-muted-foreground">
                                   {quotaMessage()}
@@ -456,6 +481,17 @@ export default function TecnicoDashboard() {
               </div>
 
               <div className="space-y-2">
+                <Label>Fecha de disponibilidad</Label>
+                <Input
+                  type="date"
+                  value={bidForm.availability_date}
+                  onChange={(e) => setBidForm({ ...bidForm, availability_date: e.target.value })}
+                  className="rounded-xl"
+                  min={new Date().toISOString().split('T')[0]} // no permite fechas pasadas
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label>Propuesta</Label>
                 <Textarea
                   rows={4}
@@ -467,7 +503,14 @@ export default function TecnicoDashboard() {
 
               <DialogFooter>
                 <Button onClick={handleSubmitBid} disabled={submitting} className="w-full rounded-xl">
-                  {submitting ? "Enviando..." : "Confirmar Cotización"}
+                  {submitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    "Confirmar Cotización"
+                  )}
                 </Button>
               </DialogFooter>
             </div>

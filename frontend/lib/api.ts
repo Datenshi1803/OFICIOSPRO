@@ -450,3 +450,148 @@ export async function getClientJobs(): Promise<{ success: boolean; data: JobData
 
   return response.json()
 }
+// ============================================================
+// CREDITS (Créditos del técnico)
+// ============================================================
+
+export interface TechnicianCredits {
+  free_credits: number
+  paid_credits: number
+}
+
+export async function getTechnicianCredits(): Promise<{ success: boolean; data: TechnicianCredits }> {
+  const token = localStorage.getItem('token')
+
+  const response = await fetch(`${API_URL}/technician/creditos`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || 'Error al obtener créditos')
+  }
+
+  return response.json()
+}
+
+// ============================================================
+// PAYMENTS (Pagos y créditos)
+// ============================================================
+
+export interface CreditPackage {
+  id: number;
+  name: string;
+  slug: string;
+  credits: number;
+  price: number;
+  subtitle: string | null;
+  badge_text: string | null;
+  description: string | null;
+  features: string[];
+  is_featured: boolean;
+}
+
+export interface TechnicianQuota {
+  free_bids_per_week: number;
+  free_bids_used: number;
+  free_bids_remaining: number;
+  paid_bids_remaining: number;
+  week_reset_at: string;
+  can_bid: boolean;
+  bid_type: 'free' | 'paid' | 'none';
+}
+
+export interface PaymentHistoryItem {
+  ulid: string;
+  type: string;
+  amount: number;
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  description: string;
+  credits: number | null;
+  paid_at: string | null;
+  created_at: string;
+}
+
+export async function getCreditPackages(): Promise<{ data: CreditPackage[] }> {
+  const response = await fetch(`${API_URL}/bid-credit-packages`, {
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Error al cargar paquetes');
+  }
+  return response.json();
+}
+
+export async function getTechnicianQuota(): Promise<{ data: TechnicianQuota }> {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_URL}/me/quota`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Error al obtener cuota');
+  }
+  return response.json();
+}
+
+export async function initiateCreditPurchase(packageId: number): Promise<{ data: any }> {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_URL}/payments/bid-credits`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({ package_id: packageId }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Error al iniciar el pago');
+  }
+  return response.json();
+}
+
+export async function confirmCreditPayment(
+  paymentId: number,
+  codOper: string
+): Promise<{ data: any }> {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_URL}/payments/confirm`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({ payment_id: paymentId, cod_oper: codOper }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Error al confirmar el pago');
+  }
+  return response.json();
+}
+
+export async function getPaymentHistory(): Promise<{ data: PaymentHistoryItem[] }> {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_URL}/me/payments`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Error al obtener historial');
+  }
+  return response.json();
+}

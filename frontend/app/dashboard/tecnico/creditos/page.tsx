@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
-import { API_URL } from '@/lib/api';
+import {
+  getCreditPackages,
+  initiateCreditPurchase,
+  type CreditPackage,
+} from '@/lib/api';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   AlertCircle,
@@ -18,65 +21,30 @@ import {
   Crown,
 } from 'lucide-react';
 
-interface Package {
-  id: number;
-  name: string;
-  credits: number;
-  price: number;
-  is_featured: boolean;
-}
-
 export default function ComprarCreditosPage() {
   const router = useRouter();
-  const { user } = useAuth();
 
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [packages, setPackages] = useState<CreditPackage[]>([]);
+  const [selectedPackage, setSelectedPackage] = useState<CreditPackage | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingPackages, setLoadingPackages] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchPackages = async () => {
-      try {
-        const res = await fetch(`${API_URL}/bid-credit-packages`);
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.message || 'Error al cargar paquetes');
-
-        setPackages(data.data);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoadingPackages(false);
-      }
-    };
-
-    fetchPackages();
+    getCreditPackages()
+      .then((res) => setPackages(res.data))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoadingPackages(false));
   }, []);
 
-  const handleSelectPackage = async (pkg: Package) => {
+  const handleSelectPackage = async (pkg: CreditPackage) => {
     setLoading(true);
     setError('');
     setSelectedPackage(pkg);
 
     try {
-      const token = localStorage.getItem('token');
+      const data = await initiateCreditPurchase(pkg.id);
 
-      const res = await fetch(`${API_URL}/payments/bid-credits`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ package_id: pkg.id }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message || 'Error al iniciar el pago');
-
-      // Guardar datos del pago en sessionStorage para usarlos en la pantalla del widget
       sessionStorage.setItem('pending_payment', JSON.stringify({
         payment_id:  data.data.payment_id,
         amount:      data.data.amount,
@@ -85,7 +53,6 @@ export default function ComprarCreditosPage() {
         package:     data.data.package,
       }));
 
-      // Navegar a la pantalla del widget de PagueloFácil
       router.push('/dashboard/tecnico/creditos/pago');
 
     } catch (err: any) {
@@ -94,7 +61,7 @@ export default function ComprarCreditosPage() {
     } finally {
       setLoading(false);
     }
-};
+  };
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
@@ -106,6 +73,7 @@ export default function ComprarCreditosPage() {
       </div>
 
       <section className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+
         {/* Header */}
         <div className="mx-auto mb-12 max-w-3xl text-center">
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.25em] text-primary shadow-sm">
@@ -118,8 +86,8 @@ export default function ComprarCreditosPage() {
           </h1>
 
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Elige el paquete que mejor se adapte a ti y continúa enviando cotizaciones
-            para conseguir nuevos trabajos.
+            Elige el paquete que mejor se adapte a ti y continúa enviando
+            cotizaciones para conseguir nuevos trabajos.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
@@ -127,12 +95,10 @@ export default function ComprarCreditosPage() {
               <ShieldCheck className="h-4 w-4 text-emerald-500" />
               Pago seguro
             </span>
-
             <span className="inline-flex items-center gap-2 rounded-full bg-card/80 px-4 py-2 shadow-sm ring-1 ring-border">
               <Zap className="h-4 w-4 text-primary" />
               Créditos sin vencimiento
             </span>
-
             <span className="inline-flex items-center gap-2 rounded-full bg-card/80 px-4 py-2 shadow-sm ring-1 ring-border">
               <CreditCard className="h-4 w-4 text-primary" />
               PagueloFácil
@@ -159,98 +125,94 @@ export default function ComprarCreditosPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className={`grid grid-cols-1 gap-6 sm:grid-cols-2 ${
+              packages.length === 3
+                ? 'lg:grid-cols-3'
+                : packages.length === 2
+                ? 'lg:grid-cols-2'
+                : 'lg:grid-cols-4'
+            }`}>
             {packages.map((pkg) => {
               const isLoading = loading && selectedPackage?.id === pkg.id;
-              const pricePerCredit = (pkg.price / pkg.credits).toFixed(2);
 
               return (
                 <article
                   key={pkg.id}
                   className={`
                     group relative flex min-h-[420px] flex-col overflow-hidden rounded-[2rem] border p-1 transition-all duration-300
-                    ${
-                      pkg.is_featured
-                        ? 'border-primary/40 bg-gradient-to-b from-primary to-primary/80 shadow-2xl shadow-primary/30 lg:-translate-y-4'
-                        : 'border-border bg-card/80 shadow-lg shadow-black/5 backdrop-blur hover:-translate-y-2 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/10'
+                    ${pkg.is_featured
+                      ? 'border-primary/40 bg-gradient-to-b from-primary to-primary/80 shadow-2xl shadow-primary/30 lg:-translate-y-4'
+                      : 'border-border bg-card/80 shadow-lg shadow-black/5 backdrop-blur hover:-translate-y-2 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/10'
                     }
                   `}
                 >
-                  {pkg.is_featured && (
+                  {/* Badge desde BD */}
+                  {pkg.badge_text && (
                     <div className="absolute right-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-white backdrop-blur">
                       <Crown className="h-3.5 w-3.5 fill-white" />
-                      Popular
+                      {pkg.badge_text}
                     </div>
                   )}
 
-                  <div
-                    className={`
-                      flex h-full flex-col rounded-[1.7rem] p-6
-                      ${pkg.is_featured ? 'bg-white/10 text-white' : 'bg-background/60'}
-                    `}
-                  >
+                  <div className={`
+                    flex h-full flex-col rounded-[1.7rem] p-6
+                    ${pkg.is_featured ? 'bg-white/10 text-white' : 'bg-background/60'}
+                  `}>
+
+                    {/* Ícono */}
                     <div className="mb-7">
-                      <div
-                        className={`
-                          mb-5 flex h-12 w-12 items-center justify-center rounded-2xl
-                          ${pkg.is_featured ? 'bg-white/20' : 'bg-primary/10'}
-                        `}
-                      >
-                        {pkg.is_featured ? (
-                          <Star className="h-6 w-6 fill-white text-white" />
-                        ) : (
-                          <Zap className="h-6 w-6 text-primary" />
-                        )}
+                      <div className={`
+                        mb-5 flex h-12 w-12 items-center justify-center rounded-2xl
+                        ${pkg.is_featured ? 'bg-white/20' : 'bg-primary/10'}
+                      `}>
+                        {pkg.is_featured
+                          ? <Star className="h-6 w-6 fill-white text-white" />
+                          : <Zap className="h-6 w-6 text-primary" />
+                        }
                       </div>
 
-                      <p
-                        className={`
-                          text-sm font-black uppercase tracking-[0.2em]
-                          ${pkg.is_featured ? 'text-white/75' : 'text-muted-foreground'}
-                        `}
-                      >
+                      {/* Nombre */}
+                      <p className={`
+                        text-sm font-black uppercase tracking-[0.2em]
+                        ${pkg.is_featured ? 'text-white/75' : 'text-muted-foreground'}
+                      `}>
                         {pkg.name}
                       </p>
 
+                      {/* Precio */}
                       <div className="mt-4 flex items-end gap-1">
                         <span className="text-5xl font-black tracking-tight">
                           ${pkg.price}
                         </span>
-                        <span
-                          className={`
-                            mb-2 text-sm font-bold
-                            ${pkg.is_featured ? 'text-white/70' : 'text-muted-foreground'}
-                          `}
-                        >
+                        <span className={`
+                          mb-2 text-sm font-bold
+                          ${pkg.is_featured ? 'text-white/70' : 'text-muted-foreground'}
+                        `}>
                           USD
                         </span>
                       </div>
 
-                      <p
-                        className={`
+                      {/* Subtitle desde BD */}
+                      {pkg.subtitle && (
+                        <p className={`
                           mt-2 text-sm
                           ${pkg.is_featured ? 'text-white/70' : 'text-muted-foreground'}
-                        `}
-                      >
-                        ${pricePerCredit} por cotización
-                      </p>
+                        `}>
+                          {pkg.subtitle}
+                        </p>
+                      )}
                     </div>
 
-                    <div
-                      className={`
-                        mb-7 h-px w-full
-                        ${pkg.is_featured ? 'bg-white/20' : 'bg-border'}
-                      `}
-                    />
+                    <div className={`mb-7 h-px w-full ${pkg.is_featured ? 'bg-white/20' : 'bg-border'}`} />
 
+                    {/* Features desde BD */}
                     <ul className="mb-8 flex-1 space-y-4">
+                      {/* Primer item siempre muestra los créditos */}
                       <li className="flex items-center gap-3">
-                        <span
-                          className={`
-                            flex h-7 w-7 shrink-0 items-center justify-center rounded-full
-                            ${pkg.is_featured ? 'bg-white/20' : 'bg-primary/10'}
-                          `}
-                        >
+                        <span className={`
+                          flex h-7 w-7 shrink-0 items-center justify-center rounded-full
+                          ${pkg.is_featured ? 'bg-white/20' : 'bg-primary/10'}
+                        `}>
                           <Zap className={pkg.is_featured ? 'h-4 w-4 text-white' : 'h-4 w-4 text-primary'} />
                         </span>
                         <span className="text-sm font-semibold">
@@ -258,54 +220,36 @@ export default function ComprarCreditosPage() {
                         </span>
                       </li>
 
-                      <li className="flex items-center gap-3">
-                        <span
-                          className={`
+                      {/* Resto de features dinámicos desde BD */}
+                      {(pkg.features ?? []).map((feature, index) => (
+                        <li key={index} className="flex items-center gap-3">
+                          <span className={`
                             flex h-7 w-7 shrink-0 items-center justify-center rounded-full
                             ${pkg.is_featured ? 'bg-white/20' : 'bg-emerald-500/10'}
-                          `}
-                        >
-                          <CheckCircle2 className={pkg.is_featured ? 'h-4 w-4 text-white' : 'h-4 w-4 text-emerald-500'} />
-                        </span>
-                        <span
-                          className={`
+                          `}>
+                            <CheckCircle2 className={
+                              pkg.is_featured ? 'h-4 w-4 text-white' : 'h-4 w-4 text-emerald-500'
+                            } />
+                          </span>
+                          <span className={`
                             text-sm
                             ${pkg.is_featured ? 'text-white/85' : 'text-muted-foreground'}
-                          `}
-                        >
-                          Sin fecha de vencimiento
-                        </span>
-                      </li>
-
-                      <li className="flex items-center gap-3">
-                        <span
-                          className={`
-                            flex h-7 w-7 shrink-0 items-center justify-center rounded-full
-                            ${pkg.is_featured ? 'bg-white/20' : 'bg-emerald-500/10'}
-                          `}
-                        >
-                          <ShieldCheck className={pkg.is_featured ? 'h-4 w-4 text-white' : 'h-4 w-4 text-emerald-500'} />
-                        </span>
-                        <span
-                          className={`
-                            text-sm
-                            ${pkg.is_featured ? 'text-white/85' : 'text-muted-foreground'}
-                          `}
-                        >
-                          Pago protegido y encriptado
-                        </span>
-                      </li>
+                          `}>
+                            {feature}
+                          </span>
+                        </li>
+                      ))}
                     </ul>
 
+                    {/* Botón */}
                     <button
                       onClick={() => handleSelectPackage(pkg)}
                       disabled={loading}
                       className={`
                         group/btn flex h-13 w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-black transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60
-                        ${
-                          pkg.is_featured
-                            ? 'bg-white text-primary shadow-xl hover:bg-white/90'
-                            : 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90'
+                        ${pkg.is_featured
+                          ? 'bg-white text-primary shadow-xl hover:bg-white/90'
+                          : 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90'
                         }
                       `}
                     >
@@ -328,18 +272,18 @@ export default function ComprarCreditosPage() {
           </div>
         )}
 
-        {/* Footer seguro */}
+        {/* Footer */}
         <div className="mx-auto mt-12 max-w-3xl rounded-3xl border bg-card/80 p-5 text-center shadow-lg backdrop-blur">
           <div className="flex items-center justify-center gap-2 text-sm font-semibold text-foreground">
             <ShieldCheck className="h-5 w-5 text-emerald-500" />
             Pago 100% seguro procesado por PagueloFácil
           </div>
-
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
             Serás redirigido a PagueloFácil para completar tu compra de forma segura.
             Tus créditos se acreditarán después de confirmar el pago.
           </p>
         </div>
+
       </section>
     </main>
   );

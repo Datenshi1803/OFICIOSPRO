@@ -24,8 +24,9 @@ export function useQuota() {
           headers: { 'Authorization': `Bearer ${token}` },
         });
         const data = await res.json();
+        console.log('Quota response:', data); 
         if (!res.ok) throw new Error(data.message || 'Error al consultar cuota');
-        setQuota(data);
+        setQuota(data.data);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -53,7 +54,12 @@ export function useQuota() {
     if (quota.bid_type === 'paid')
       return `Usarás 1 crédito pagado. Te quedan ${quota.paid_bids_remaining} créditos.`;
     return null;
+
+    
   };
 
+  
+
   return { quota, loading, error, checkAndBid, quotaMessage };
+  
 }

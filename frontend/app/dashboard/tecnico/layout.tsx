@@ -3,9 +3,11 @@
 import Link from "next/link"
 import { useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
+import { useQuota } from "@/hooks/use-quota"
 import {
   Wrench, Home, FileText, MessageSquare, User, Settings,
-  Menu, X, Bell, Search, Star, MoreVertical, LogOut, AlertCircle
+  Menu, X, Bell, Search, Star, MoreVertical, LogOut, AlertCircle,
+  Zap, Gift, ShoppingCart, Coins, Loader2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,11 +19,16 @@ import {
 
 export default function TecnicoLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth()
+  const { quota, loading: loadingQuota } = useQuota()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleLogout = async () => {
     await logout()
   }
+
+  const freeCredits  = quota?.free_bids_remaining  ?? 0
+  const paidCredits  = quota?.paid_bids_remaining  ?? 0
+  const totalCredits = freeCredits + paidCredits
 
   const navigation = [
     { name: "Inicio", href: "/dashboard/tecnico", icon: Home },
@@ -66,6 +73,73 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
               )}
             </Link>
           ))}
+
+          {/* ── Créditos / Comprar ────────────────────────────────── */}
+          <div className="pt-2 pb-1">
+            <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1.5">
+              Créditos
+            </p>
+
+            {/* Tarjeta de resumen de créditos */}
+            <div className="rounded-xl border bg-gradient-to-br from-primary/5 to-primary/10 p-3 mb-2 space-y-2.5">
+              {/* Créditos gratuitos */}
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
+                    <Gift className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                  </span>
+                  Gratuitos
+                </span>
+                {loadingQuota
+                  ? <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                  : <span className="text-xs font-black text-foreground tabular-nums">{freeCredits}</span>
+                }
+              </div>
+
+              {/* Créditos de pago */}
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15">
+                    <Zap className="h-3 w-3 text-primary fill-primary" />
+                  </span>
+                  De pago
+                </span>
+                {loadingQuota
+                  ? <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                  : <span className="text-xs font-black text-foreground tabular-nums">{paidCredits}</span>
+                }
+              </div>
+
+              {/* Separador */}
+              <div className="h-px bg-border/60" />
+
+              {/* Total */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground">Total</span>
+                {loadingQuota
+                  ? <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                  : <span className="flex items-center gap-1 text-xs font-black text-primary">
+                      <Coins className="h-3.5 w-3.5" />
+                      {totalCredits}
+                    </span>
+                }
+              </div>
+            </div>
+
+            {/* Botón Comprar Créditos */}
+            <Link
+              href="/dashboard/tecnico/creditos"
+              className="group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-primary bg-primary/8 hover:bg-primary hover:text-primary-foreground transition-all duration-200"
+            >
+              <ShoppingCart className="h-5 w-5 group-hover:scale-110 transition-transform" />
+              <span>Comprar créditos</span>
+              {!loadingQuota && (
+                <span className="ml-auto flex h-5 min-w-5 px-1 items-center justify-center rounded-full bg-primary/15 group-hover:bg-white/20 text-[10px] font-black tabular-nums transition-colors">
+                  {totalCredits}
+                </span>
+              )}
+            </Link>
+          </div>
         </nav>
 
         {/* Perfil en Sidebar con Menú de Opciones */}
@@ -135,6 +209,19 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Mini créditos en header (visible en móvil) */}
+            <Link
+              href="/dashboard/tecnico/creditos"
+              className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 text-xs font-bold shadow-sm hover:border-primary/40 hover:text-primary transition-colors"
+            >
+              {loadingQuota
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                : <Zap className="h-3.5 w-3.5 text-primary fill-primary" />
+              }
+              <span>{loadingQuota ? "..." : totalCredits}</span>
+              <span className="text-muted-foreground font-normal hidden sm:inline">créditos</span>
+            </Link>
+
             <div className="relative hidden md:block">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input placeholder="Buscar..." className="w-64 pl-10 bg-secondary/50 border-transparent rounded-full h-10" />
