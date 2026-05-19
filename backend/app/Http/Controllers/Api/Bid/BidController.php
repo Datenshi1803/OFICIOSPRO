@@ -5,12 +5,16 @@ namespace App\Http\Controllers\Api\Bid;
 use App\Http\Controllers\Controller;
 use App\Models\Bid;
 use App\Models\Job;
+use App\Services\TechnicianQuotaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 class BidController extends Controller
 {
+    public function __construct(
+        protected TechnicianQuotaService $quotaService
+    ) {}
+
     /**
      * POST /api/technician/cotizaciones
      * Técnico envía una cotización a un trabajo publicado.
@@ -24,10 +28,10 @@ class BidController extends Controller
             'proposal'          => 'required|string|min:20|max:500',
             'availability_date' => 'required|date|after_or_equal:today',
         ], [
-            'job_id.exists'              => 'El trabajo no existe.',
-            'amount.regex'               => 'El monto no puede tener más de 2 decimales.',
-            'proposal.min'               => 'La propuesta debe tener al menos 20 caracteres.',
-            'proposal.max'               => 'La propuesta no puede superar 500 caracteres.',
+            'job_id.exists'                    => 'El trabajo no existe.',
+            'amount.regex'                     => 'El monto no puede tener más de 2 decimales.',
+            'proposal.min'                     => 'La propuesta debe tener al menos 20 caracteres.',
+            'proposal.max'                     => 'La propuesta no puede superar 500 caracteres.',
             'availability_date.after_or_equal' => 'La fecha debe ser hoy o en el futuro.',
         ]);
 
@@ -64,7 +68,22 @@ class BidController extends Controller
             ], 422);
         }
 
-        // ── Crear cotización ──────────────────────────────────────────────────
+        // ── Validar créditos disponibles ──────────────────────────────────────
+
+        $availability = $this->quotaService->checkAvailability($technician);
+
+        if ($availability === 'none') {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes cotizaciones disponibles. Compra créditos para continuar.',
+            ], 422);
+        }
+
+        // ── Consumir crédito y crear cotización ───────────────────────────────
+
+        $isPaidBid = $availability === 'paid';
+
+        $this->quotaService->consumeCredit($technician);
 
         $bid = Bid::create([
             'job_id'            => $job->id,
@@ -73,7 +92,7 @@ class BidController extends Controller
             'estimated_days'    => $data['estimated_days'],
             'proposal'          => $data['proposal'],
             'availability_date' => $data['availability_date'],
-            'is_paid_bid'       => false, // lógica de créditos se agrega en siguiente fase
+            'is_paid_bid'       => $isPaidBid,
             'status'            => 'pending',
         ]);
 
@@ -122,7 +141,6 @@ class BidController extends Controller
             'technician:id,name,avatar_url,reputation_score,jobs_completed,is_verified',
         ])->where('job_id', $job->id);
 
-        // Ordenamiento — RF-10
         $sort = $request->query('sort', 'reputation');
 
         $bids = match ($sort) {
@@ -131,7 +149,6 @@ class BidController extends Controller
             default => $query->defaultOrder()->get(),
         };
 
-        // Agregar label de reputación — RF-17
         $bids->each(function ($bid) {
             if ($bid->technician) {
                 $bid->technician->reputation_label = $bid->technician->jobs_completed < 3
@@ -154,7 +171,6 @@ class BidController extends Controller
     {
         $user = $request->user();
 
-        // Solo el técnico dueño puede editar
         if ($user->id !== $bid->technician_id) {
             return response()->json([
                 'success' => false,
@@ -162,7 +178,6 @@ class BidController extends Controller
             ], 403);
         }
 
-        // Solo si el trabajo sigue publicado
         if ($bid->job->status !== 'published') {
             return response()->json([
                 'success' => false,
@@ -193,7 +208,10 @@ class BidController extends Controller
     {
         return response()->json([
             'success' => true,
-            'data'    => $bid->load('technician:id,name,avatar_url,reputation_score,jobs_completed,is_verified', 'job:id,code,title,status'),
+            'data'    => $bid->load(
+                'technician:id,name,avatar_url,reputation_score,jobs_completed,is_verified',
+                'job:id,code,title,status'
+            ),
         ]);
     }
 

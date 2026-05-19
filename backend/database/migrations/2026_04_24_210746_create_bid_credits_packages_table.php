@@ -11,8 +11,14 @@ return new class extends Migration
         Schema::create('bid_credit_packages', function (Blueprint $table) {
             $table->id();
             $table->string('name', 100);
+            $table->string('slug', 255)->unique();
             $table->unsignedTinyInteger('credits');
             $table->decimal('price', 10, 2);
+            $table->string('subtitle', 255)->nullable();
+            $table->string('badge_text', 255)->nullable();
+            $table->text('description')->nullable();
+            $table->json('features')->nullable();
+            $table->string('payment_provider_id', 255)->nullable();
             $table->boolean('is_featured')->default(false);
             $table->boolean('is_active')->default(true);
             $table->unsignedTinyInteger('sort_order')->default(0);

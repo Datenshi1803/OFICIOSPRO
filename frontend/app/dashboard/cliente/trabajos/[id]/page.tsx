@@ -36,7 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { getJobBids, BidData } from "@/lib/api"
+import { getJobBids, acceptBid, BidData } from "@/lib/api"
 
 const estadoConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   published:      { label: "Publicado",   variant: "default"   },
@@ -86,12 +86,26 @@ export default function TrabajoDetallePage() {
     setShowAcceptDialog(true)
   }
 
+  // Reemplaza confirmAccept completo
   async function confirmAccept() {
-    // Por implementar: endpoint de aceptar cotización
-    setAccepting(true)
-    await new Promise(r => setTimeout(r, 1000)) // placeholder
-    setAccepting(false)
-    setShowAcceptDialog(false)
+    if (!selectedBid) return;
+    setAccepting(true);
+
+    try {
+      await acceptBid(jobId, selectedBid.id);
+
+      setShowAcceptDialog(false);
+
+      // Actualizar la lista de cotizaciones para reflejar el nuevo estado
+      const res = await getJobBids(jobId, sortBy);
+      setBids(res.data);
+
+    } catch (err: any) {
+      setError(err.message || 'Error al aceptar la cotización');
+      setShowAcceptDialog(false);
+    } finally {
+      setAccepting(false);
+    }
   }
 
   // Stats de cotizaciones

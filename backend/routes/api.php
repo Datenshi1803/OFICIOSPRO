@@ -9,170 +9,118 @@ use App\Http\Controllers\Api\Bid\BidController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\WebhookController;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// RUTAS PÚBLICAS — sin autenticación
+// ============================================================
 
 Route::get('/test', [TestController::class, 'index']);
 
-// ============================================================
-// RUTAS PÚBLICAS (sin autenticación)
-// ============================================================
 Route::prefix('auth')->group(function () {
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login',    [AuthController::class, 'login']);
     Route::post('/register', [AuthController::class, 'register']);
 });
 
-// ============================================================
-// RUTAS PROTEGIDAS CON AUTH CUSTOM
-// ============================================================
-
-// Webhook — sin autenticación (PagueloFácil lo llama directamente)
+// Webhook — PagueloFácil llama directamente, sin token
 Route::post('/webhooks/paguelofacil', [WebhookController::class, 'paguelofacil'])
     ->name('webhooks.paguelofacil');
 
-// Rutas públicas
+// Paquetes de créditos — público para que el frontend los muestre sin login
 Route::get('/bid-credit-packages', [PaymentController::class, 'packages'])
     ->name('bid-credit-packages.index');
 
-
-// Rutas autenticadas
+// ============================================================
+// RUTAS PROTEGIDAS — auth:sanctum en todo
+// ============================================================
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/me/quota',    [PaymentController::class, 'quota'])->name('quota.show');
-    Route::get('/me/payments', [PaymentController::class, 'history'])->name('payments.history');
 
-    Route::post('/payments/bid-credits', [PaymentController::class, 'initiate'])->name('payments.initiate');
-    Route::post('/payments/confirm',     [PaymentController::class, 'confirm'])->name('payments.confirm');
-    Route::post('/payments/create-link', [PaymentController::class, 'createLink'])->name('payments.createLink');
-    });
+    // ── Logout y perfil propio ────────────────────────────────────────────────
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
 
-Route::middleware('auth')->group(function () {
-
-    // -------------------------------------------------------
-    // RUTAS EXCLUSIVAS PARA CLIENTES
-    // -------------------------------------------------------
-    Route::prefix('client')->middleware('role:client')->group(function () {
-        Route::get('/dashboard', function () {
-            return response()->json([
-                'success' => true,
-                'message' => 'Dashboard de cliente',
-                'data' => [
-                    'mis_trabajos' => [],
-                    'tecnicos_favoritos' => [],
-                    'notificaciones' => [],
-                ]
-            ]);
-        });
-
-        Route::get('/profile', [AuthController::class, 'profile']);
-        Route::put('/profile', [AuthController::class, 'updateProfile']);
-        Route::post('/trabajos', [JobController::class, 'store']);
-        Route::get('/trabajos', [JobController::class, 'clientJobs']);
-
-         // ── Cotizaciones (vista del cliente) ──────────────────────────────────
-        // Ver todas las cotizaciones de uno de sus trabajos
-        Route::get('/trabajos/{job}/cotizaciones', [BidController::class, 'index']);
-    });
-
-    // -------------------------------------------------------
-    // RUTAS EXCLUSIVAS PARA TÉCNICOS
-    // -------------------------------------------------------
-    Route::prefix('technician')->middleware('role:technician')->group(function () {
-        Route::get('/dashboard', function () {
-            return response()->json([
-                'success' => true,
-                'message' => 'Dashboard de técnico',
-                'data' => [
-                    'trabajos_disponibles' => [],
-                    'mis_trabajos' => [],
-                    'cotizaciones_pendientes' => [],
-                    'ingresos' => [],
-                ]
-            ]);
-        });
-
-        Route::get('/profile', [AuthController::class, 'profile']);
-        Route::put('/profile', [AuthController::class, 'updateProfile']);
-        
-        Route::get('/trabajos-disponibles', [JobController::class, 'available']);
-        Route::get('/mis-trabajos', [JobController::class, 'myJobs']);
-        
-        // ── Cotizaciones (vista del técnico) ──────────────────────────────────
-        Route::post('/cotizaciones', [BidController::class, 'store']);        // Enviar cotización
-        Route::get('/mis-cotizaciones', [BidController::class, 'myBids']);   // Ver mis cotizaciones
-        Route::put('/cotizaciones/{bid}', [BidController::class, 'update']); // Editar cotización propia
-    });
-
-    // -------------------------------------------------------
-    // RUTAS EXCLUSIVAS PARA ADMINISTRADORES
-    // -------------------------------------------------------
-    Route::prefix('admin')->middleware('role:admin')->group(function () {
-        Route::get('/dashboard', function () {
-            return response()->json([
-                'success' => true,
-                'message' => 'Dashboard de administrador',
-                'data' => [
-                    'total_usuarios' => 0,
-                    'total_tecnicos' => 0,
-                    'total_clientes' => 0,
-                    'trabajos_activos' => 0,
-                ]
-            ]);
-        });
-
-        Route::get('/usuarios', [UserController::class, 'index']);
-        Route::get('/usuarios/{user}', [UserController::class, 'show']);
-        Route::put('/usuarios/{user}', [UserController::class, 'update']);
-        Route::delete('/usuarios/{user}', [UserController::class, 'destroy']);
-        Route::get('/usuarios/{user}/toggle-active', [UserController::class, 'toggleActive']);
-        Route::get('/estadisticas', function () {
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'usuarios_por_rol' => [],
-                    'trabajos_por_estado' => [],
-                ]
-            ]);
-        });
-    });
-
-    // -------------------------------------------------------
-    // RUTAS COMUNES (cualquier usuario autenticado)
-    // -------------------------------------------------------
     Route::get('/me', function (\Illuminate\Http\Request $request) {
-        // El usuario ya fue adjuntado por el AuthMiddleware
-        $user = $request->user();
-
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No autenticado'
-            ], 401);
-        }
-
         return response()->json([
             'success' => true,
-            'data' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
-                'is_active' => $user->is_active,
-            ]
+            'data'    => $request->user()->only([
+                'id', 'name', 'email', 'role', 'is_active',
+            ]),
         ]);
     });
 
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    // ── Pagos y cuota ─────────────────────────────────────────────────────────
+    Route::get('/me/quota',              [PaymentController::class, 'quota'])->name('quota.show');
+    Route::get('/me/payments',           [PaymentController::class, 'history'])->name('payments.history');
+    Route::post('/payments/bid-credits', [PaymentController::class, 'initiate'])->name('payments.initiate');
+    Route::post('/payments/confirm',     [PaymentController::class, 'confirm'])->name('payments.confirm');
+    Route::post('/payments/create-link', [PaymentController::class, 'createLink'])->name('payments.createLink');
 
-    // Ver detalle de una cotización específica (ambos roles)
+    // ── Cotización individual (ambos roles) ───────────────────────────────────
     Route::get('/cotizaciones/{bid}', [BidController::class, 'show']);
-});
 
-// ============================================================
-// RUTAS PÚBLICAS DE RECURSOS
-// ============================================================
-//Route::apiResource('jobs', JobController::class);
-Route::get('/jobs', [JobController::class, 'index']);
-Route::get('/jobs/available', [JobController::class, 'available']);
+    // ─────────────────────────────────────────────────────────────────────────
+    // CLIENTE
+    // ─────────────────────────────────────────────────────────────────────────
+    Route::prefix('client')->middleware('role:client')->group(function () {
+
+        Route::get('/dashboard', fn() => response()->json([
+            'success' => true,
+            'message' => 'Dashboard de cliente',
+        ]));
+
+        Route::get('/profile', [AuthController::class, 'profile']);
+        Route::put('/profile', [AuthController::class, 'updateProfile']);
+
+        // Específicas ANTES que las genéricas
+        Route::post('/trabajos/{job}/aceptar-cotizacion', [JobController::class, 'acceptBid']);
+        Route::patch('/trabajos/{job}/completar',         [JobController::class, 'markCompleted']);
+        Route::post('/trabajos',                          [JobController::class, 'store']);
+        Route::get('/trabajos',                           [JobController::class, 'clientJobs']);
+        Route::get('/trabajos/{job}/cotizaciones',        [BidController::class, 'index']);
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TÉCNICO
+    // ─────────────────────────────────────────────────────────────────────────
+    Route::prefix('technician')->middleware('role:technician')->group(function () {
+
+        Route::get('/dashboard', fn() => response()->json([
+            'success' => true,
+            'message' => 'Dashboard de técnico',
+        ]));
+
+        Route::get('/profile', [AuthController::class, 'profile']);
+        Route::put('/profile', [AuthController::class, 'updateProfile']);
+
+        Route::get('/trabajos-disponibles', [JobController::class, 'available']);
+        Route::get('/mis-trabajos',         [JobController::class, 'myJobs']);
+
+        Route::post('/cotizaciones',      [BidController::class, 'store']);
+        Route::get('/mis-cotizaciones',   [BidController::class, 'myBids']);
+        Route::put('/cotizaciones/{bid}', [BidController::class, 'update']);
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ADMINISTRADOR
+    // ─────────────────────────────────────────────────────────────────────────
+    Route::prefix('admin')->middleware('role:admin')->group(function () {
+
+        Route::get('/dashboard', fn() => response()->json([
+            'success' => true,
+            'message' => 'Dashboard de administrador',
+        ]));
+
+        Route::get('/usuarios',                      [UserController::class, 'index']);
+        Route::get('/usuarios/{user}',               [UserController::class, 'show']);
+        Route::put('/usuarios/{user}',               [UserController::class, 'update']);
+        Route::delete('/usuarios/{user}',            [UserController::class, 'destroy']);
+        Route::get('/usuarios/{user}/toggle-active', [UserController::class, 'toggleActive']);
+
+        Route::post('/trabajos/{job}/republicar', [JobController::class, 'republish']);
+
+        Route::get('/estadisticas', fn() => response()->json([
+            'success' => true,
+            'data'    => [
+                'usuarios_por_rol'    => [],
+                'trabajos_por_estado' => [],
+            ],
+        ]));
+    });
+});

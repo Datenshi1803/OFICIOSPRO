@@ -1,294 +1,521 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import {
-  Wrench,
-  Shield,
-  Star,
-  Users,
-  ArrowRight,
-  Menu,
-  X,
-  CheckCircle2,
-  Clock,
-  DollarSign,
-  MessageSquare,
-  ChevronRight,
-  MapPin,
+  Wrench, Shield, Star, Users, ArrowRight, Clock, Briefcase,
+  Snowflake, Settings, Fan, CheckCircle2, MapPin, Zap, PiggyBank,
+  CalendarCheck, MessageSquare, Sparkles, PhoneCall, ThumbsUp,
+  Award, ChevronRight, Facebook, Instagram, Twitter, Linkedin,
+  Menu, X,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 
 export default function LandingPage() {
+  const [isScrolled, setIsScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
-  fetch("http://127.0.0.1:8000/api/test")
-    .then(res => res.json())
-    .then(data => console.log("Backend:", data))
-    .catch(err => console.error("Error:", err));
-}, []);
+    const handleScroll = () => setIsScrolled(window.scrollY > 10)
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <Wrench className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold text-foreground">OficiosPro</span>
-          </div>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden items-center gap-8 md:flex">
-            <Link href="#como-funciona" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-              Cómo funciona
+    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-200 selection:text-blue-900">
+      
+      {/* HEADER FLOTANTE */}
+      <header className="fixed top-0 left-0 right-0 z-50 flex justify-center px-4 pt-5">
+        <div
+          className={`w-full max-w-[1440px] transition-all duration-500 rounded-[22px] border border-white/70 ${
+            isScrolled
+              ? "bg-white/90 backdrop-blur-xl shadow-xl shadow-slate-200/60 py-4 px-7"
+              : "bg-white/85 backdrop-blur-xl shadow-lg shadow-slate-200/40 py-4 px-7"
+          }`}
+        >
+          <div className="grid grid-cols-3 items-center">
+            
+            {/* LOGO IZQUIERDA */}
+            <Link href="/" className="flex items-center gap-3 group justify-self-start">
+              {/* <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-300/40">
+                <Wrench className="w-5 h-5 text-white" />
+              </div> */}
+              <span className="text-2xl font-black tracking-tight text-slate-900">
+                Oficios<span className="text-blue-600">Pro</span>
+              </span>
             </Link>
-            <Link href="#servicios" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-              Servicios
-            </Link>
-            <Link href="#tecnicos" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-              Para Técnicos
-            </Link>
-          </nav>
 
-          <div className="hidden items-center gap-3 md:flex">
-            <Button variant="ghost" asChild>
-              <Link href="/login">Iniciar Sesión</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/registro">Registrarse</Link>
-            </Button>
-          </div>
-
-          {/* Mobile menu button */}
-          <button
-            className="md:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6 text-foreground" />
-            ) : (
-              <Menu className="h-6 w-6 text-foreground" />
-            )}
-          </button>
-        </div>
-
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <div className="border-t border-border bg-card md:hidden">
-            <nav className="flex flex-col gap-1 p-4">
-              <Link href="#como-funciona" className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
-                Cómo funciona
-              </Link>
-              <Link href="#servicios" className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
-                Servicios
-              </Link>
-              <Link href="#tecnicos" className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
-                Para Técnicos
-              </Link>
-              <div className="mt-4 flex flex-col gap-2">
-                <Button variant="outline" className="w-full" asChild>
-                  <Link href="/login">Iniciar Sesión</Link>
-                </Button>
-                <Button className="w-full" asChild>
-                  <Link href="/registro">Registrarse</Link>
-                </Button>
-              </div>
+            {/* NAV CENTRADO */}
+            <nav className="hidden md:flex items-center justify-center gap-12">
+              {[
+                ["#servicios", "Servicios"],
+                ["#como-funciona", "Cómo funciona"],
+                ["#tecnicos", "Para técnicos"],
+              ].map(([href, label]) => (
+                <Link
+                  key={label}
+                  href={href}
+                  className="text-[15px] font-semibold text-slate-800 hover:text-blue-600 transition-colors"
+                >
+                  {label}
+                </Link>
+              ))}
             </nav>
+
+            {/* BOTONES DERECHA */}
+            <div className="hidden md:flex items-center justify-end gap-7">
+              <Link
+                href="/login"
+                className="text-[15px] font-semibold text-slate-800 hover:text-blue-600 transition-colors"
+              >
+                Iniciar sesión
+              </Link>
+
+              <Link
+                href="/registro"
+                className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-[15px] font-bold hover:shadow-xl hover:shadow-blue-300/40 transition-all"
+              >
+                Registrarse
+              </Link>
+            </div>
+
+            {/* MOBILE */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden col-start-3 justify-self-end p-2 rounded-lg bg-slate-100 text-slate-700"
+              aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
-        )}
+
+          {mobileMenuOpen && (
+            <div className="md:hidden pt-4 pb-2 flex flex-col gap-3 border-t border-slate-100 mt-4">
+              {[
+                ["#servicios", "Servicios"],
+                ["#como-funciona", "Cómo funciona"],
+                ["#tecnicos", "Para técnicos"],
+                ["/login", "Iniciar sesión"],
+                ["/registro", "Registrarse"],
+              ].map(([href, label]) => (
+                <Link
+                  key={label}
+                  href={href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-sm font-medium text-slate-700 hover:text-blue-600 transition-colors py-1"
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(59,130,246,0.15),transparent)]" />
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8 lg:py-32">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4 text-primary" />
-              <span>Disponible en Panamá</span>
-            </div>
-            <h1 className="text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              Conectamos clientes con técnicos de{" "}
-              <span className="text-primary">aire acondicionado</span> verificados
-            </h1>
-            <p className="mt-6 text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
-              Publica tu trabajo, recibe cotizaciones de técnicos certificados y elige la mejor opción. 
-              Sin complicaciones, con garantía de calidad.
-            </p>
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button size="lg" className="w-full gap-2 sm:w-auto" asChild>
-                <Link href="/registro?tipo=cliente">
-                  Publicar un Trabajo
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
-                <Link href="/registro?tipo=tecnico">
-                  Soy Técnico
-                </Link>
-              </Button>
-            </div>
-          </div>
+      {/* HERO SECTION */}
+      <section className="relative overflow-hidden pt-36 pb-16 lg:pt-44 lg:pb-24">
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute top-0 right-0 w-[55%] h-full bg-gradient-to-br from-blue-50/70 via-cyan-50/40 to-transparent rounded-bl-[220px]" />
+          <div className="absolute top-1/4 left-[-5%] w-[400px] h-[400px] bg-blue-200/20 rounded-full blur-[120px]" />
+          <div className="absolute bottom-0 right-[-5%] w-[350px] h-[350px] bg-cyan-200/20 rounded-full blur-[100px]" />
+        </div>
 
-          {/* Stats */}
-          <div className="mx-auto mt-16 grid max-w-4xl grid-cols-2 gap-4 sm:mt-20 lg:grid-cols-4">
-            {[
-              { value: "500+", label: "Técnicos verificados" },
-              { value: "2,000+", label: "Trabajos completados" },
-              { value: "4.8", label: "Calificación promedio" },
-              { value: "24h", label: "Tiempo de respuesta" },
-            ].map((stat) => (
-              <Card key={stat.label} className="border-border bg-card/50">
-                <CardContent className="p-4 text-center sm:p-6">
-                  <div className="text-2xl font-bold text-foreground sm:text-3xl">{stat.value}</div>
-                  <div className="mt-1 text-xs text-muted-foreground sm:text-sm">{stat.label}</div>
-                </CardContent>
-              </Card>
-            ))}
+        <div className="w-full max-w-[1440px] mx-auto px-6 lg:px-12">
+          <div className="grid lg:grid-cols-[47%_53%] gap-10 lg:gap-16 items-center">
+            
+            {/* COLUMNA IZQUIERDA */}
+            <div className="text-center lg:text-left relative z-10">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-blue-100 mb-7 shadow-md shadow-slate-200/50">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <MapPin className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-bold text-blue-700">Disponible en todo Panamá</span>
+              </div>
+
+              <h1 className="text-5xl sm:text-6xl lg:text-[72px] xl:text-[78px] font-black leading-[1.08] tracking-tight text-slate-950">
+                Técnicos de aire{" "}
+                <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
+                  confiables
+                </span>
+                <br />
+                <span className="relative inline-block">
+                  en minutos.
+                  <span className="absolute left-2 right-2 -bottom-3 h-[6px] bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full -rotate-1 opacity-90" />
+                </span>
+              </h1>
+
+              <p className="text-lg lg:text-xl text-slate-500 mt-11 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+                Publica tu trabajo gratis, recibe cotizaciones de técnicos
+                verificados y elige la mejor opción para instalación, reparación o
+                mantenimiento.
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-5 mb-10">
+                <Link
+                  href="/registro?tipo=cliente"
+                  className="group w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-base hover:shadow-2xl hover:shadow-blue-400/40 transition-all duration-300 flex items-center justify-center gap-3"
+                >
+                  Publicar trabajo gratis
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+
+                <Link
+                  href="/registro?tipo=tecnico"
+                  className="group w-full sm:w-auto px-8 py-4 rounded-xl bg-white border border-slate-200 text-slate-800 font-bold text-base hover:border-blue-400 hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
+                >
+                  Soy técnico
+                  <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </div>
+
+              <div className="flex flex-wrap justify-center lg:justify-start gap-5">
+                <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white border border-slate-100 shadow-md shadow-slate-200/50">
+                  <Shield className="w-5 h-5 text-emerald-600" />
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">100% Verificado</p>
+                    <p className="text-xs text-slate-500">Técnicos certificados</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white border border-slate-100 shadow-md shadow-slate-200/50">
+                  <Zap className="w-5 h-5 text-amber-500" />
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">Respuesta en &lt;1h</p>
+                    <p className="text-xs text-slate-500">Atención rápida</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white border border-slate-100 shadow-md shadow-slate-200/50">
+                  <Star className="w-5 h-5 text-purple-500" />
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">4.9/5 estrellas</p>
+                    <p className="text-xs text-slate-500">Calificación de clientes</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* COLUMNA DERECHA */}
+<div className="relative mt-8 lg:mt-0">
+
+  <div className="relative flex items-center justify-end h-[520px] lg:h-[640px]">
+
+    {/* Glow decorativo suave */}
+    <div className="absolute right-10 bottom-20 w-[420px] h-[420px] bg-cyan-200/30 blur-3xl rounded-full" />
+    <div className="absolute top-16 right-36 w-[220px] h-[220px] bg-blue-200/20 blur-3xl rounded-full" />
+
+    {/* Imagen principal */}
+    <img
+  src="/fondoTec.png"
+  alt="Técnico profesional de aire acondicionado"
+  className="
+    relative
+    z-10
+    w-[115%]
+    lg:w-[128%]
+    max-w-[980px]
+    lg:max-w-[1100px]
+    h-auto
+    object-contain
+    -translate-y-20
+    lg:-translate-y-28
+    drop-shadow-[0_40px_60px_rgba(0,0,0,0.20)]
+    transition-all
+    duration-500
+    hover:scale-[1.02]
+  "
+/>
+
+    {/* Tarjeta flotante superior */}
+    <div className="absolute top-8 left-0 z-20 hidden md:flex items-center gap-3 bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-2xl px-5 py-4">
+      <div className="w-11 h-11 rounded-xl bg-emerald-100 flex items-center justify-center">
+        <Award className="w-5 h-5 text-emerald-600" />
+      </div>
+
+      <div>
+        <p className="text-sm font-black text-slate-900">Técnico certificado</p>
+        <p className="text-xs text-slate-500">Seguro y confiable</p>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+            
           </div>
         </div>
       </section>
 
-      {/* How it Works */}
-      <section id="como-funciona" className="border-t border-border bg-card py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              ¿Cómo funciona?
-            </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
-              En solo 3 pasos encuentra al técnico perfecto para tu necesidad
-            </p>
-          </div>
+      {/* STATS SECTION */}
+      <section className="px-6 lg:px-12 relative z-20 mt-4">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="grid grid-cols-2 lg:grid-cols-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-6 lg:p-8 shadow-2xl shadow-slate-300/40 overflow-hidden relative">
+            <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.07]" />
 
-          <div className="mx-auto mt-16 grid max-w-5xl gap-8 lg:grid-cols-3">
             {[
-              {
-                step: "01",
-                icon: MessageSquare,
-                title: "Publica tu trabajo",
-                description: "Describe qué necesitas, sube fotos y establece tu presupuesto estimado.",
-              },
-              {
-                step: "02",
-                icon: Users,
-                title: "Recibe cotizaciones",
-                description: "Técnicos verificados te envían sus propuestas con precios y tiempos.",
-              },
-              {
-                step: "03",
-                icon: CheckCircle2,
-                title: "Elige y confirma",
-                description: "Compara opciones, selecciona al mejor técnico y agenda tu servicio.",
-              },
-            ].map((item) => (
-              <div key={item.step} className="relative">
-                <div className="flex flex-col items-center text-center">
-                  <div className="mb-4 text-5xl font-bold text-primary/20">{item.step}</div>
-                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
-                    <item.icon className="h-7 w-7 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-foreground">{item.title}</h3>
-                  <p className="mt-2 text-muted-foreground">{item.description}</p>
+              { icon: Users, val: "500+", lab: "Técnicos activos", col: "from-cyan-400 to-blue-400" },
+              { icon: Briefcase, val: "2,500+", lab: "Proyectos realizados", col: "from-emerald-400 to-teal-400" },
+              { icon: Star, val: "4.9", lab: "Calificación promedio", col: "from-amber-400 to-orange-400" },
+              { icon: Clock, val: "<1h", lab: "Tiempo de respuesta", col: "from-violet-400 to-purple-400" },
+            ].map((s, i) => (
+              <div
+                key={i}
+                className={`relative p-5 flex flex-col items-center text-center ${
+                  i !== 3 ? "lg:border-r border-white/10" : ""
+                }`}
+              >
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${s.col} flex items-center justify-center mb-4 shadow-lg`}>
+                  <s.icon className="w-6 h-6 text-white" />
                 </div>
+                <span className="text-3xl lg:text-4xl font-black text-white">{s.val}</span>
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2">
+                  {s.lab}
+                </span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+      {/* SERVICIOS */}
+      <section id="servicios" className="py-28 px-6 lg:px-12">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="text-center mb-16">
+            <span className="text-sm font-bold uppercase tracking-[0.3em] text-blue-600 bg-blue-50 px-4 py-2 rounded-full inline-block">
+              Servicios principales
+            </span>
+            <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mt-6 tracking-tight">
+              Soluciones expertas para tu aire
+            </h2>
+            <div className="w-20 h-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full mt-4 mx-auto" />
+            <p className="text-slate-500 max-w-2xl mx-auto mt-6 text-lg">
+              Encuentra técnicos preparados para resolver cualquier problema de
+              climatización de forma rápida y segura.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                icon: Snowflake,
+                title: "Instalación",
+                desc: "Instalación profesional de equipos split, inverter y centrales con garantía.",
+                color: "from-blue-600 to-cyan-500",
+                features: ["Garantía incluida", "Instalación en 24h"],
+              },
+              {
+                icon: Settings,
+                title: "Reparación",
+                desc: "Diagnóstico y solución de fallas, fugas, tarjetas electrónicas y compresores.",
+                color: "from-slate-800 to-blue-700",
+                features: ["Diagnóstico gratis", "Piezas originales"],
+              },
+              {
+                icon: Fan,
+                title: "Mantenimiento",
+                desc: "Limpieza profunda para mejorar el rendimiento y ahorrar hasta un 30% de energía.",
+                color: "from-cyan-500 to-emerald-500",
+                features: ["Ahorro garantizado", "Limpieza profunda"],
+              },
+            ].map((svc, i) => (
+              <div
+                key={i}
+                className="group relative bg-white p-8 rounded-3xl border border-slate-100 hover:border-blue-200 hover:shadow-2xl hover:shadow-blue-100/50 transition-all duration-500"
+              >
+                <div
+                  className={`relative w-16 h-16 rounded-2xl bg-gradient-to-br ${svc.color} flex items-center justify-center mb-6 shadow-xl group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300`}
+                >
+                  <svc.icon className="w-8 h-8 text-white" />
+                </div>
+
+                <h3 className="relative text-2xl font-black text-slate-900 mb-3">
+                  {svc.title}
+                </h3>
+                <p className="relative text-slate-500 leading-relaxed mb-6">
+                  {svc.desc}
+                </p>
+
+                <div className="relative flex flex-wrap gap-2 mb-8">
+                  {svc.features.map((feature, idx) => (
+                    <span key={idx} className="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 text-slate-600">
+                      {feature}
+                    </span>
+                  ))}
+                </div>
+
+                <Link
+                  href="/registro?tipo=cliente"
+                  className="relative inline-flex items-center gap-2 text-sm font-bold text-blue-600 group-hover:gap-3 transition-all duration-300"
+                >
+                  Solicitar ahora
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CÓMO FUNCIONA */}
+      <section id="como-funciona" className="py-28 px-6 lg:px-12 bg-gradient-to-br from-slate-50 to-white">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Todo lo que necesitas para encontrar el técnico ideal
+              <span className="text-sm font-bold uppercase tracking-[0.3em] text-blue-600 bg-blue-50 px-4 py-2 rounded-full inline-block">
+                Cómo funciona
+              </span>
+              <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mt-6 mb-6 leading-tight">
+                Resolver tu problema <br />
+                <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
+                  nunca fue tan fácil
+                </span>
               </h2>
-              <p className="mt-4 text-lg text-muted-foreground">
-                Nuestra plataforma te brinda las herramientas para tomar la mejor decisión con confianza.
+              <div className="w-20 h-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full mb-6" />
+              <p className="text-lg text-slate-500 leading-relaxed mb-8 max-w-xl">
+                En pocos pasos puedes publicar tu solicitud y recibir respuestas
+                de técnicos disponibles cerca de ti.
               </p>
 
-              <div className="mt-10 space-y-6">
+              <Link
+                href="/registro?tipo=cliente"
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 text-white font-bold hover:from-blue-600 hover:to-cyan-500 shadow-xl hover:shadow-blue-200 transition-all duration-300"
+              >
+                Empezar ahora
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            </div>
+
+            <div className="grid gap-5">
+              {[
+                {
+                  icon: MessageSquare,
+                  title: "Publica tu problema",
+                  desc: "Describe qué necesitas: instalación, reparación o mantenimiento en minutos.",
+                  step: "01",
+                },
+                {
+                  icon: CalendarCheck,
+                  title: "Recibe cotizaciones",
+                  desc: "Técnicos verificados te contactan con precios y disponibilidad real.",
+                  step: "02",
+                },
+                {
+                  icon: CheckCircle2,
+                  title: "Elige y agenda",
+                  desc: "Selecciona al mejor técnico según su calificación y coordina el servicio.",
+                  step: "03",
+                },
+              ].map((step, i) => (
+                <div
+                  key={i}
+                  className="group flex gap-5 bg-white border border-slate-100 rounded-2xl p-6 hover:shadow-xl hover:shadow-blue-100/50 transition-all duration-300"
+                >
+                  <div className="relative">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                      <step.icon className="w-7 h-7" />
+                    </div>
+                    <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-slate-200 text-slate-600 text-xs font-black flex items-center justify-center">
+                      {step.step}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900 mt-1">
+                      {step.title}
+                    </h3>
+                    <p className="text-slate-500 mt-2 leading-relaxed">
+                      {step.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PARA TÉCNICOS */}
+      <section id="tecnicos" className="py-28 px-6 lg:px-12">
+        <div className="max-w-[1400px] mx-auto rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-10 lg:p-16 overflow-hidden relative shadow-2xl">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-full blur-[120px]" />
+          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-[100px]" />
+          <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:28px_28px] opacity-[0.05]" />
+
+          <div className="relative grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-400/20 text-cyan-300 text-sm font-bold uppercase tracking-wider mb-6">
+                <Sparkles className="w-4 h-4" />
+                Para profesionales
+              </span>
+
+              <h2 className="text-4xl lg:text-5xl xl:text-6xl font-black text-white mb-6 leading-tight">
+                Convierte tu oficio en un{" "}
+                <span className="bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent">
+                  negocio rentable
+                </span>
+              </h2>
+              <div className="w-20 h-1 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full mb-6" />
+
+              <p className="text-slate-300 text-lg leading-relaxed mb-8 max-w-xl">
+                Recibe solicitudes de clientes reales, organiza tu agenda y gana
+                más visibilidad en tu zona sin depender solo de recomendaciones.
+              </p>
+
+              <div className="space-y-4 mb-10">
                 {[
-                  {
-                    icon: Shield,
-                    title: "Técnicos verificados",
-                    description: "Todos los técnicos pasan por un proceso de verificación de identidad y credenciales.",
-                  },
-                  {
-                    icon: Star,
-                    title: "Sistema de reputación",
-                    description: "Reseñas verificadas de clientes reales para que elijas con confianza.",
-                  },
-                  {
-                    icon: Clock,
-                    title: "Respuesta rápida",
-                    description: "Recibe múltiples cotizaciones en menos de 24 horas.",
-                  },
-                  {
-                    icon: DollarSign,
-                    title: "Precios competitivos",
-                    description: "Compara cotizaciones y encuentra la mejor relación calidad-precio.",
-                  },
-                ].map((feature) => (
-                  <div key={feature.title} className="flex gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                      <feature.icon className="h-5 w-5 text-primary" />
+                  "Clientes verificados y reales",
+                  "Tú defines tu precio y horario",
+                  "Más trabajos sin depender solo de recomendaciones",
+                  "Soporte dedicado 24/7",
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 text-white font-semibold">
+                    <div className="w-7 h-7 rounded-full bg-cyan-400/20 flex items-center justify-center">
+                      <CheckCircle2 className="w-4 h-4 text-cyan-300" />
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{feature.title}</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">{feature.description}</p>
-                    </div>
+                    {item}
                   </div>
                 ))}
               </div>
+
+              <Link
+                href="/registro?tipo=tecnico"
+                className="inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-white text-slate-900 font-bold text-lg hover:bg-gradient-to-r hover:from-cyan-300 hover:to-blue-300 hover:text-slate-900 transition-all duration-300 shadow-xl shadow-black/20 group"
+              >
+                Registrarme como técnico
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </div>
 
-            <div className="relative">
-              <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
-                <div className="border-b border-border bg-muted/50 px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full bg-destructive/60" />
-                    <div className="h-3 w-3 rounded-full bg-warning/60" />
-                    <div className="h-3 w-3 rounded-full bg-accent/60" />
-                  </div>
+            <div className="grid gap-6">
+              <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-8 hover:bg-white/15 transition-all">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center mb-6 shadow-lg">
+                  <PiggyBank className="w-7 h-7 text-white" />
                 </div>
-                <div className="p-6">
-                  <div className="mb-4 text-sm font-medium text-muted-foreground">Cotizaciones recibidas</div>
-                  <div className="space-y-4">
-                    {[
-                      { name: "Carlos M.", rating: 4.9, price: "$85", time: "2-3 horas", jobs: 127 },
-                      { name: "Roberto S.", rating: 4.7, price: "$95", time: "1-2 horas", jobs: 89 },
-                      { name: "Miguel A.", rating: 4.8, price: "$75", time: "3-4 horas", jobs: 203 },
-                    ].map((tech, i) => (
-                      <div key={i} className="flex items-center justify-between rounded-lg border border-border bg-background p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
-                            {tech.name.charAt(0)}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-foreground">{tech.name}</span>
-                              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Star className="h-3 w-3 fill-warning text-warning" />
-                                {tech.rating}
-                              </span>
-                            </div>
-                            <div className="text-xs text-muted-foreground">{tech.jobs} trabajos</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-semibold text-foreground">{tech.price}</div>
-                          <div className="text-xs text-muted-foreground">{tech.time}</div>
-                        </div>
-                      </div>
-                    ))}
+                <p className="text-slate-400 font-bold text-sm uppercase tracking-wider mb-2">
+                  Potencial de ingresos mensuales
+                </p>
+                <h3 className="text-5xl font-black text-white mb-2">$2,500+</h3>
+                <p className="text-cyan-300 font-semibold">
+                  Trabajando a tu ritmo, sin horarios fijos
+                </p>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl p-8 text-white shadow-2xl shadow-blue-900/30">
+                <div className="flex gap-1 mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <p className="text-lg font-medium leading-relaxed mb-6">
+                  “OficiosPro me ayudó a conseguir más clientes y llenar mi
+                  agenda semanal. En 3 meses dupliqué mis ingresos.”
+                </p>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center font-black text-lg">
+                    JM
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">Juan Méndez</p>
+                    <p className="text-xs text-cyan-100">
+                      Técnico de aire · Ciudad de Panamá
+                    </p>
                   </div>
                 </div>
               </div>
@@ -297,128 +524,116 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* For Technicians */}
-      <section id="tecnicos" className="border-t border-border bg-sidebar py-20 text-sidebar-foreground sm:py-28">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-            <div className="order-2 lg:order-1">
-              <Card className="border-sidebar-border bg-sidebar-accent">
-                <CardContent className="p-8">
-                  <div className="mb-6 text-lg font-medium text-sidebar-foreground/80">Tus ganancias potenciales</div>
-                  <div className="mb-8 text-5xl font-bold text-sidebar-primary">$2,500+</div>
-                  <div className="text-sm text-sidebar-foreground/60">Promedio mensual por técnico activo</div>
-                  
-                  <div className="mt-8 space-y-4">
-                    {[
-                      "Acceso a clientes verificados",
-                      "Sin cuota mensual - solo pagas por trabajo cerrado",
-                      "Soporte para disputas y garantías",
-                      "Construye tu reputación digital",
-                    ].map((benefit, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-sidebar-primary" />
-                        <span className="text-sm text-sidebar-foreground">{benefit}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="order-1 lg:order-2">
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                ¿Eres técnico de aire acondicionado?
-              </h2>
-              <p className="mt-4 text-lg text-sidebar-foreground/80">
-                Únete a nuestra red de profesionales verificados y accede a más clientes 
-                sin depender del boca a boca.
-              </p>
-
-              <div className="mt-10">
-                <Button size="lg" variant="secondary" className="gap-2" asChild>
-                  <Link href="/registro?tipo=tecnico">
-                    Registrarme como Técnico
-                    <ChevronRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-
-              <div className="mt-10 grid grid-cols-2 gap-6">
-                <div>
-                  <div className="text-3xl font-bold text-sidebar-primary">10%</div>
-                  <div className="mt-1 text-sm text-sidebar-foreground/60">Comisión por trabajo cerrado</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-sidebar-primary">$0</div>
-                  <div className="mt-1 text-sm text-sidebar-foreground/60">Cuota de registro</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="overflow-hidden rounded-2xl bg-primary px-6 py-16 text-center sm:px-16 sm:py-20">
-            <h2 className="text-balance text-3xl font-bold tracking-tight text-primary-foreground sm:text-4xl">
-              ¿Listo para encontrar al técnico perfecto?
-            </h2>
-            <p className="mx-auto mt-4 max-w-xl text-pretty text-lg text-primary-foreground/80">
-              Publica tu primer trabajo gratis y recibe cotizaciones de técnicos verificados en menos de 24 horas.
-            </p>
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button size="lg" variant="secondary" className="w-full gap-2 sm:w-auto" asChild>
-                <Link href="/registro">
-                  Comenzar Ahora
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-border bg-card py-12">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-8 md:grid-cols-4">
-            <div className="md:col-span-2">
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-                  <Wrench className="h-5 w-5 text-primary-foreground" />
-                </div>
-                <span className="text-xl font-bold text-foreground">OficiosPro</span>
-              </div>
-              <p className="mt-4 max-w-sm text-sm text-muted-foreground">
-                Conectamos clientes con técnicos de aire acondicionado verificados en Panamá. 
-                Calidad garantizada, precios competitivos.
-              </p>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold text-foreground">Plataforma</h3>
-              <ul className="mt-4 space-y-2">
-                <li><Link href="#" className="text-sm text-muted-foreground hover:text-foreground">Cómo funciona</Link></li>
-                <li><Link href="#" className="text-sm text-muted-foreground hover:text-foreground">Para Clientes</Link></li>
-                <li><Link href="#" className="text-sm text-muted-foreground hover:text-foreground">Para Técnicos</Link></li>
-                <li><Link href="#" className="text-sm text-muted-foreground hover:text-foreground">Precios</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold text-foreground">Legal</h3>
-              <ul className="mt-4 space-y-2">
-                <li><Link href="#" className="text-sm text-muted-foreground hover:text-foreground">Términos de uso</Link></li>
-                <li><Link href="#" className="text-sm text-muted-foreground hover:text-foreground">Política de privacidad</Link></li>
-                <li><Link href="#" className="text-sm text-muted-foreground hover:text-foreground">Contacto</Link></li>
-              </ul>
-            </div>
-          </div>
+      {/* CTA FINAL */}
+      <section className="px-6 lg:px-12 pb-28">
+        <div className="max-w-[1400px] mx-auto text-center bg-gradient-to-br from-white to-slate-50 border border-slate-100 rounded-3xl p-12 lg:p-20 shadow-2xl shadow-slate-200 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-full blur-3xl opacity-50" />
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-purple-100 to-pink-100 rounded-full blur-3xl opacity-40" />
           
-          <div className="mt-12 border-t border-border pt-8 text-center text-sm text-muted-foreground">
-            <p>&copy; 2025 OficiosPro. Todos los derechos reservados. Panamá.</p>
+          <div className="relative">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 text-blue-700 text-sm font-bold mb-6">
+              <PhoneCall className="w-4 h-4" />
+              Atención inmediata
+            </div>
+            <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mb-5">
+              ¿Necesitas un técnico hoy?
+            </h2>
+            <div className="w-20 h-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full mx-auto mb-6" />
+            <p className="text-lg text-slate-500 max-w-2xl mx-auto mb-10">
+              Publica tu solicitud gratis y conecta con técnicos de aire disponibles
+              en Panamá en menos de 1 hora.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/registro?tipo=cliente"
+                className="inline-flex items-center gap-3 px-9 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-lg hover:shadow-2xl hover:shadow-blue-400/40 transition-all duration-300 group"
+              >
+                Solicitar servicio ahora
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link
+                href="/registro?tipo=tecnico"
+                className="inline-flex items-center gap-2 px-9 py-4 rounded-xl bg-white border-2 border-slate-200 text-slate-800 font-bold text-lg hover:border-blue-400 transition-all"
+              >
+                Soy técnico
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="bg-slate-900 pt-20 pb-8">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-12 mb-14">
+            <div className="sm:col-span-2 md:col-span-1">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg">
+                  <Wrench className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-2xl font-black tracking-tight text-white">
+                  Oficios<span className="text-cyan-300">Pro</span>
+                </span>
+              </div>
+              <p className="text-slate-400 leading-relaxed mb-6">
+                Plataforma líder en Panamá para conectar clientes con técnicos de aire acondicionado verificados.
+              </p>
+              <div className="flex gap-3">
+                <Link href="#" className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-blue-600 transition-all" aria-label="Facebook">
+                  <Facebook className="w-4 h-4" />
+                </Link>
+                <Link href="#" className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-blue-600 transition-all" aria-label="Instagram">
+                  <Instagram className="w-4 h-4" />
+                </Link>
+                <Link href="#" className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-blue-600 transition-all" aria-label="Twitter">
+                  <Twitter className="w-4 h-4" />
+                </Link>
+                <Link href="#" className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-blue-600 transition-all" aria-label="LinkedIn">
+                  <Linkedin className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+
+            {[
+              { title: "Plataforma", links: ["Servicios", "Cómo funciona", "Precios", "Soporte técnico"] },
+              { title: "Para técnicos", links: ["Registrarse", "Beneficios", "Requisitos", "Centro de ayuda"] },
+              { title: "Legal", links: ["Términos y condiciones", "Política de privacidad", "Aviso legal", "Cookies"] },
+            ].map((col, i) => (
+              <div key={i}>
+                <h4 className="font-bold text-white mb-5 uppercase text-xs tracking-wider">
+                  {col.title}
+                </h4>
+                <ul className="space-y-3">
+                  {col.links.map((item) => (
+                    <li key={item}>
+                      <Link
+                        href="#"
+                        className="text-slate-400 text-sm hover:text-cyan-300 transition-colors"
+                      >
+                        {item}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-5">
+            <p className="text-slate-500 text-sm">
+              © 2026 OficiosPro.
+            </p>
+            <div className="flex gap-6">
+              <Link href="#" className="text-slate-500 text-xs hover:text-cyan-300 transition-colors">
+                Mapa del sitio
+              </Link>
+              <Link href="#" className="text-slate-500 text-xs hover:text-cyan-300 transition-colors">
+                Accesibilidad
+              </Link>
+              <Link href="#" className="text-slate-500 text-xs hover:text-cyan-300 transition-colors">
+                Contacto
+              </Link>
+            </div>
           </div>
         </div>
       </footer>
