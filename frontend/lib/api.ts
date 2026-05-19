@@ -595,3 +595,27 @@ export async function getPaymentHistory(): Promise<{ data: PaymentHistoryItem[] 
   }
   return response.json();
 }
+
+export async function acceptBid(
+  jobId: number,
+  bidId: number
+): Promise<{ success: boolean; message: string; data: JobData }> {
+  const token = localStorage.getItem('token');
+
+  const response = await fetch(`${API_URL}/client/trabajos/${jobId}/aceptar-cotizacion`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({ bid_id: bidId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Error al aceptar la cotización');
+  }
+
+  return response.json();
+}
