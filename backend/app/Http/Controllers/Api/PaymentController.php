@@ -9,6 +9,7 @@ use App\Services\PaymentService;
 use App\Services\TechnicianQuotaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class PaymentController extends Controller
 {
@@ -19,20 +20,29 @@ class PaymentController extends Controller
 
     /**
      * GET /api/bid-credit-packages
-     * Lista los paquetes disponibles para compra.
      */
     public function packages(): JsonResponse
     {
         $packages = \App\Models\BidCreditPackage::where('is_active', true)
             ->orderBy('sort_order')
-            ->get();
+            ->get()
+            ->map(fn($pkg) => [
+                'id'          => $pkg->id,
+                'name'        => $pkg->name,
+                'slug'        => $pkg->slug,
+                'credits'     => $pkg->credits,
+                'price'       => $pkg->price,
+                'subtitle'    => $pkg->subtitle,
+                'badge_text'  => $pkg->badge_text,
+                'description' => $pkg->description,
+                'features'    => $pkg->features ?? [],
+                'is_featured' => $pkg->is_featured,
+            ]);
 
         return response()->json(['data' => $packages]);
     }
-
     /**
      * GET /api/me/quota
-     * Retorna la cuota actual del técnico autenticado.
      */
     public function quota(Request $request): JsonResponse
     {
@@ -54,7 +64,7 @@ class PaymentController extends Controller
 
     /**
      * POST /api/payments/bid-credits
-     * Inicia la compra de un paquete de créditos.
+     * Inicia la compra — crea el Payment en BD y devuelve los datos al frontend.
      */
     public function initiate(InitiatePaymentRequest $request): JsonResponse
     {
@@ -67,8 +77,80 @@ class PaymentController extends Controller
     }
 
     /**
+     * POST /api/payments/create-link
+     * Llama a PagueloFácil para obtener la URL de checkout de un solo uso.
+     * El frontend redirige al usuario a esa URL.
+     */
+   public function createLink(Request $request): JsonResponse
+{
+    $request->validate(['payment_id' => 'required|integer']);
+
+    $payment = \App\Models\Payment::where('id', $request->payment_id)
+        ->where('user_id', $request->user()->id)
+        ->where('status', 'pending')
+        ->firstOrFail();
+
+    $isSandbox = config('services.paguelofacil.env') === 'sandbox';
+    $endpoint  = $isSandbox
+        ? 'https://sandbox.paguelofacil.com/LinkDeamon.cfm'
+        : 'https://secure.paguelofacil.com/LinkDeamon.cfm';
+
+    $returnUrl    = config('app.frontend_url') . '/dashboard/tecnico/creditos/retorno';
+    $returnUrlHex = bin2hex($returnUrl);
+
+    // ✅ Construir el postR manualmente como lo hace PagueloFácil
+    $data = [
+        'CCLW'       => config('services.paguelofacil.cclw'),
+        'CMTN'       => number_format($payment->amount, 2, '.', ''),
+        'CDSC'       => $payment->description,
+        'RETURN_URL' => $returnUrlHex,
+        'PARM_1'     => (string) $payment->id,
+        'EXPIRES_IN' => 3600,  // ← te faltaba este campo
+    ];
+
+    // Construir query string manualmente (igual que el ejemplo oficial)
+    $postR = '';
+    foreach ($data as $mk => $mv) {
+        $postR .= "&{$mk}={$mv}";
+    }
+
+    $response = Http::withHeaders([
+        'Content-Type' => 'application/x-www-form-urlencoded',
+        'Accept'       => '*/*',
+    ])
+    ->withOptions([
+        'allow_redirects' => false, // ✅ CRÍTICO: evita que Laravel siga el redirect
+    ])
+    ->send('POST', $endpoint, ['body' => $postR]);
+
+    \Log::info('PagueloFácil raw response', [
+        'status'  => $response->status(),
+        'headers' => $response->headers(),
+        'body'    => $response->body(),   // ← así ves exactamente qué devuelve
+    ]);
+
+    $body = $response->json();
+
+    if (! $response->successful() || empty($body['data']['url'])) {
+        \Log::error('PagueloFácil createLink falló', [
+            'status' => $response->status(),
+            'body'   => $body,
+        ]);
+        return response()->json([
+            'success' => false,
+            'message' => 'No se pudo generar el enlace de pago. Intenta nuevamente.',
+        ], 502);
+    }
+
+    return response()->json([
+        'success' => true,
+        'data'    => ['url' => $body['data']['url']],
+    ]);
+}   
+
+    /**
      * POST /api/payments/confirm
-     * Confirma el pago con el CodOper retornado por PagueloFácil.
+     * Confirma el pago con el Oper retornado por PagueloFácil.
      */
     public function confirm(ConfirmPaymentRequest $request): JsonResponse
     {
@@ -83,7 +165,6 @@ class PaymentController extends Controller
 
     /**
      * GET /api/me/payments
-     * Historial de pagos del técnico autenticado.
      */
     public function history(Request $request): JsonResponse
     {
