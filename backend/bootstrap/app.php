@@ -4,8 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\HandleCors;
-use App\Http\Middleware\AuthMiddleware;
-use App\Http\Middleware\RoleMiddleware;
+use App\Http\Middleware\RoleMiddleware; // ← quita el use de AuthMiddleware
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,10 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(HandleCors::class);
-        
-        // Registrar middlewares de autenticación y roles
+
         $middleware->alias([
-            'auth' => AuthMiddleware::class,
+            // ← 'auth' eliminado — Sanctum lo maneja con auth:sanctum
             'role' => RoleMiddleware::class,
         ]);
     })

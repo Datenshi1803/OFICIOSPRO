@@ -23,9 +23,10 @@ export interface LoginData {
 }
 
 export interface AuthResponse {
+  success: boolean; // ← agregar, el backend lo retorna
   message: string;
   user: any;
-  token?: string;
+  token: string;   // ← quitar el ?
 }
 
 export async function registerUser(data: RegisterData): Promise<AuthResponse> {
