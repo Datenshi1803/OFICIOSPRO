@@ -23,9 +23,10 @@ export interface LoginData {
 }
 
 export interface AuthResponse {
+  success: boolean; // ← agregar, el backend lo retorna
   message: string;
   user: any;
-  token?: string;
+  token: string;   // ← quitar el ?
 }
 
 export async function registerUser(data: RegisterData): Promise<AuthResponse> {
@@ -268,6 +269,7 @@ export interface JobData {
     name: string
     reputation_score?: string | number
   }
+  images?: { id: number; url: string; sort_order: number }[] // ← agregar esta línea
 }
 
 // ── Técnico: ver trabajos disponibles ────────────────────────────────────────
@@ -407,6 +409,7 @@ export interface StoreJobData {
   zone: string
   urgency: 'normal' | 'urgent' | 'emergency'
   budget?: number | null
+  image_urls?: string[]  // ← agregar esta línea
 }
 
 // ── Cliente: crear un trabajo ─────────────────────────────────────────────────
@@ -618,4 +621,9 @@ export async function acceptBid(
   }
 
   return response.json();
+}
+
+export function optimizeCloudinaryUrl(url: string, width = 800): string {
+  if (!url.includes('cloudinary.com')) return url
+  return url.replace('/upload/', `/upload/f_webp,q_auto:good,w_${width},c_limit/`)
 }

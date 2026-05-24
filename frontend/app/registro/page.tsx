@@ -14,6 +14,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { registerUser } from "@/lib/api"
+import { useRouter } from "next/navigation"
+
+// 2. Inicializar el router dentro del componente
+
 
 // Datos de ubicaciones de Panamá
 const ubicacionesPanama = {
@@ -126,6 +130,7 @@ const ubicacionesPanama = {
 
 function RegisterContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const defaultTab = searchParams.get("tipo") === "tecnico" ? "tecnico" : "cliente"
   
   const [activeTab, setActiveTab] = useState(defaultTab)
@@ -201,9 +206,10 @@ function RegisterContent() {
         corregimiento: clienteCorregimiento,
       })
       
-      console.log('Registro exitoso:', response)
-      alert('¡Registro exitoso! Ahora puedes iniciar sesión.')
-      // Aquí podrías redirigir al login
+      localStorage.setItem('token', response.token)
+      localStorage.setItem('user', JSON.stringify(response.user))
+      router.push('dashboard/cliente')
+
     } catch (error: any) {
       console.error('Error en registro:', error)
       alert(error.message || 'Error al registrar usuario')
@@ -231,8 +237,10 @@ function RegisterContent() {
           experience_years: parseInt(tecnicoData.experiencia) || 0,
         })
         
-        console.log('Registro exitoso:', response)
-        alert('¡Registro exitoso! Ahora puedes iniciar sesión.')
+        localStorage.setItem('token', response.token)
+        localStorage.setItem('user', JSON.stringify(response.user))
+        router.push('dashboard/tecnico')
+
       } catch (error: any) {
         console.error('Error en registro:', error)
         alert(error.message || 'Error al registrar usuario')
