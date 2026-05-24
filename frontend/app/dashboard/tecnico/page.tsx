@@ -16,6 +16,9 @@ import {
   Zap,
   ArrowUpRight,
   RefreshCw,
+  Images,
+  User,
+  Phone,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,6 +39,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { useQuota } from "@/hooks/use-quota"
 import { getAvailableJobs, getMyBids, storeBid, JobData, BidData } from "@/lib/api"
+import { optimizeCloudinaryUrl } from "@/lib/cloudinary"
 
 const urgenciaConfig: Record<string, { label: string; bgClass: string; dotClass: string; icon: any }> = {
   normal: {
@@ -90,14 +94,16 @@ export default function TecnicoDashboard() {
     availability_date: "",
   })
 
+  // ── Nuevo: modal de detalles ──────────────────────────────
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [detailJob, setDetailJob] = useState<JobData | null>(null)
+
   const isVerified = !!user?.is_verified
 
   async function loadData(showRefresh = false) {
     if (showRefresh) setRefreshing(true)
     else setLoading(true)
-
     setError(null)
-
     try {
       const [jobsRes, bidsRes] = await Promise.all([getAvailableJobs(), getMyBids()])
       setTrabajos(jobsRes.data)
@@ -110,31 +116,26 @@ export default function TecnicoDashboard() {
     }
   }
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  useEffect(() => { loadData() }, [])
 
   function handleCotizar(job: JobData) {
     if (!checkAndBid()) return
-
     setSelectedJob(job)
-    setBidForm({
-      amount: "",
-      estimated_days: "",
-      proposal: "",
-      availability_date: "",
-    })
+    setBidForm({ amount: "", estimated_days: "", proposal: "", availability_date: "" })
     setBidErrors({})
     setBidSuccess(false)
     setShowBidModal(true)
   }
 
+  function handleVerDetalles(job: JobData) {
+    setDetailJob(job)
+    setShowDetailModal(true)
+  }
+
   async function handleSubmitBid() {
     if (!selectedJob) return
-
     setBidErrors({})
     setSubmitting(true)
-
     try {
       await storeBid({
         job_id: selectedJob.id,
@@ -143,12 +144,9 @@ export default function TecnicoDashboard() {
         proposal: bidForm.proposal,
         availability_date: bidForm.availability_date,
       })
-
       setBidSuccess(true)
-
       const bidsRes = await getMyBids()
       setMisCotizaciones(bidsRes.data)
-
       setTimeout(() => setShowBidModal(false), 1500)
     } catch (err: any) {
       setBidErrors({ general: err.message || "Error al enviar cotización" })
@@ -174,16 +172,13 @@ export default function TecnicoDashboard() {
         <div>
           <p className="mb-1 text-sm font-medium text-primary">
             {trabajos.length > 0
-              ? `Hay ${trabajos.length} trabajo${trabajos.length > 1 ? "s" : ""} disponible${
-                  trabajos.length > 1 ? "s" : ""
-                } en tu zona`
+              ? `Hay ${trabajos.length} trabajo${trabajos.length > 1 ? "s" : ""} disponible${trabajos.length > 1 ? "s" : ""} en tu zona`
               : "Resumen general"}
           </p>
           <h2 className="text-3xl font-extrabold tracking-tight">
             Hola, {user?.name?.split(" ")[0] || "Técnico"}
           </h2>
         </div>
-
         <Button
           variant="outline"
           className="gap-2 rounded-full bg-card shadow-sm transition-all hover:shadow-md"
@@ -204,39 +199,12 @@ export default function TecnicoDashboard() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          {
-            label: "Trabajos completados",
-            value: user?.jobs_completed || "0",
-            icon: Briefcase,
-            color: "from-blue-500/20 to-blue-500/5",
-            iconBg: "bg-blue-500",
-          },
-          {
-            label: "Tasa de aceptación",
-            value: `${tasaAceptacion}%`,
-            icon: TrendingUp,
-            color: "from-emerald-500/20 to-emerald-500/5",
-            iconBg: "bg-emerald-500",
-          },
-          {
-            label: "Cotizaciones enviadas",
-            value: misCotizaciones.length.toString(),
-            icon: Send,
-            color: "from-indigo-500/20 to-indigo-500/5",
-            iconBg: "bg-indigo-500",
-          },
-          {
-            label: "Reputación",
-            value: user?.reputation_score || "0.00",
-            icon: Star,
-            color: "from-amber-500/20 to-amber-500/5",
-            iconBg: "bg-amber-500",
-          },
+          { label: "Trabajos completados", value: user?.jobs_completed || "0", icon: Briefcase, color: "from-blue-500/20 to-blue-500/5", iconBg: "bg-blue-500" },
+          { label: "Tasa de aceptación", value: `${tasaAceptacion}%`, icon: TrendingUp, color: "from-emerald-500/20 to-emerald-500/5", iconBg: "bg-emerald-500" },
+          { label: "Cotizaciones enviadas", value: misCotizaciones.length.toString(), icon: Send, color: "from-indigo-500/20 to-indigo-500/5", iconBg: "bg-indigo-500" },
+          { label: "Reputación", value: user?.reputation_score || "0.00", icon: Star, color: "from-amber-500/20 to-amber-500/5", iconBg: "bg-amber-500" },
         ].map((stat) => (
-          <Card
-            key={stat.label}
-            className="group relative overflow-hidden rounded-2xl border-none shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-          >
+          <Card key={stat.label} className="group relative overflow-hidden rounded-2xl border-none shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
             <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-50`} />
             <CardContent className="relative z-10 p-6">
               <div className="mb-4 flex items-center justify-between">
@@ -266,22 +234,16 @@ export default function TecnicoDashboard() {
                   <Eye className="h-4 w-4" />
                   Disponibles
                   {!loading && (
-                    <Badge variant="secondary" className="ml-0.5 h-5 px-1.5">
-                      {trabajos.length}
-                    </Badge>
+                    <Badge variant="secondary" className="ml-0.5 h-5 px-1.5">{trabajos.length}</Badge>
                   )}
                 </TabsTrigger>
-
                 <TabsTrigger value="cotizaciones" className="gap-2 rounded-lg">
                   <Send className="h-4 w-4" />
                   Mis Ofertas
                   {!loading && misCotizaciones.length > 0 && (
-                    <Badge variant="secondary" className="ml-0.5 h-5 px-1.5">
-                      {misCotizaciones.length}
-                    </Badge>
+                    <Badge variant="secondary" className="ml-0.5 h-5 px-1.5">{misCotizaciones.length}</Badge>
                   )}
                 </TabsTrigger>
-
                 <TabsTrigger value="asignados" className="gap-2 rounded-lg">
                   <CheckCircle2 className="h-4 w-4" />
                   Asignados
@@ -300,9 +262,7 @@ export default function TecnicoDashboard() {
                   <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-16 text-center">
                     <Briefcase className="mb-4 h-8 w-8 text-muted-foreground" />
                     <h3 className="text-lg font-bold">Sin resultados</h3>
-                    <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-                      No hay trabajos disponibles en este momento.
-                    </p>
+                    <p className="mt-2 max-w-sm text-sm text-muted-foreground">No hay trabajos disponibles en este momento.</p>
                   </div>
                 ) : (
                   trabajosFiltrados.map((trabajo) => {
@@ -310,26 +270,30 @@ export default function TecnicoDashboard() {
                     const yaCotice = misCotizaciones.some((b) => b.job_id === trabajo.id)
                     const expanded = expandedJob === trabajo.id
                     const UrgIcon = urgencia.icon
+                    const imageCount = trabajo.images?.length ?? 0
 
                     return (
                       <div
                         key={trabajo.id}
                         className={`group rounded-2xl border bg-card p-5 transition-all duration-300 ${
-                          yaCotice
-                            ? "border-emerald-200 bg-emerald-50/10"
-                            : "hover:border-primary/30 hover:shadow-md"
+                          yaCotice ? "border-emerald-200 bg-emerald-50/10" : "hover:border-primary/30 hover:shadow-md"
                         }`}
                       >
                         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                           <div className="min-w-0 flex-1 space-y-3">
                             <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="secondary" className="font-mono">
-                                #{trabajo.code}
-                              </Badge>
+                              <Badge variant="secondary" className="font-mono">#{trabajo.code}</Badge>
                               <span className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${urgencia.bgClass}`}>
                                 <UrgIcon className="h-3 w-3" />
                                 {urgencia.label}
                               </span>
+                              {/* ── Indicador de imágenes ── */}
+                              {imageCount > 0 && (
+                                <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                                  <Images className="h-3 w-3" />
+                                  {imageCount} {imageCount === 1 ? "imagen" : "imágenes"}
+                                </span>
+                              )}
                             </div>
 
                             <h3 className="text-lg font-bold transition-colors group-hover:text-primary">
@@ -345,7 +309,6 @@ export default function TecnicoDashboard() {
                                 <MapPin className="h-4 w-4 text-primary" />
                                 {trabajo.zone}
                               </div>
-
                               {trabajo.budget && (
                                 <div className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-600">
                                   <DollarSign className="h-4 w-4" />
@@ -355,7 +318,6 @@ export default function TecnicoDashboard() {
                             </div>
                           </div>
 
-                          {/* ✅ Botones según estado de créditos */}
                           <div className="flex min-w-[160px] flex-col items-start justify-between gap-3 pt-4 sm:items-end lg:border-l lg:pl-6 lg:pt-0">
                             <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                               <Calendar className="h-3.5 w-3.5" />
@@ -363,14 +325,22 @@ export default function TecnicoDashboard() {
                             </span>
 
                             <div className="w-full space-y-2">
+                              {/* ── Botón Ver detalles ── */}
+                              <Button
+                                variant="outline"
+                                className="w-full rounded-xl font-semibold"
+                                onClick={() => handleVerDetalles(trabajo)}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                Ver detalles
+                              </Button>
+
                               {yaCotice ? (
-                                // Ya envió cotización a este trabajo
                                 <Button className="w-full rounded-xl font-semibold" disabled>
                                   <CheckCircle2 className="mr-2 h-4 w-4" />
                                   Oferta enviada
                                 </Button>
                               ) : quota?.can_bid ? (
-                                // Tiene créditos — puede cotizar
                                 <Button
                                   className="w-full rounded-xl font-semibold"
                                   disabled={!isVerified || loadingQuota}
@@ -380,7 +350,6 @@ export default function TecnicoDashboard() {
                                   Cotizar ahora
                                 </Button>
                               ) : (
-                                // Sin créditos — lleva a comprar
                                 <Button
                                   className="w-full rounded-xl font-semibold"
                                   variant="outline"
@@ -392,11 +361,8 @@ export default function TecnicoDashboard() {
                                 </Button>
                               )}
 
-                              {/* Mensaje informativo de cuota */}
                               {!yaCotice && quotaMessage() && (
-                                <p className="text-right text-xs text-muted-foreground">
-                                  {quotaMessage()}
-                                </p>
+                                <p className="text-right text-xs text-muted-foreground">{quotaMessage()}</p>
                               )}
                             </div>
                           </div>
@@ -436,6 +402,152 @@ export default function TecnicoDashboard() {
         </CardContent>
       </Card>
 
+      {/* ── Modal de detalles del trabajo ── */}
+      <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
+        <DialogContent className="rounded-2xl sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5 text-primary" />
+              Detalles del Trabajo
+            </DialogTitle>
+          </DialogHeader>
+
+          {detailJob && (() => {
+            const urgencia = urgenciaConfig[detailJob.urgency] || urgenciaConfig.normal
+            const UrgIcon = urgencia.icon
+            const yaCotice = misCotizaciones.some((b) => b.job_id === detailJob.id)
+
+            return (
+              <div className="max-h-[70vh] overflow-y-auto space-y-5 py-2 pr-1">
+                {/* Encabezado */}
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className="font-mono">#{detailJob.code}</Badge>
+                    <span className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${urgencia.bgClass}`}>
+                      <UrgIcon className="h-3 w-3" />
+                      {urgencia.label}
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-bold">{detailJob.title}</h2>
+                </div>
+
+                {/* Descripción */}
+                <div className="rounded-xl bg-muted/50 p-4">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Descripción</p>
+                  <p className="text-sm leading-relaxed">{detailJob.description}</p>
+                </div>
+
+                {/* Info del trabajo */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-muted/30 p-3">
+                    <p className="mb-1 text-xs text-muted-foreground">Zona</p>
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      {detailJob.zone}
+                    </div>
+                  </div>
+                  <div className="rounded-xl bg-muted/30 p-3">
+                    <p className="mb-1 text-xs text-muted-foreground">Publicado</p>
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      {new Date(detailJob.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  {detailJob.budget && (
+                    <div className="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-900/20">
+                      <p className="mb-1 text-xs text-muted-foreground">Presupuesto</p>
+                      <div className="flex items-center gap-1.5 font-medium text-emerald-600">
+                        <DollarSign className="h-4 w-4" />
+                        ${detailJob.budget}
+                      </div>
+                    </div>
+                  )}
+                  {detailJob.category && (
+                    <div className="rounded-xl bg-muted/30 p-3">
+                      <p className="mb-1 text-xs text-muted-foreground">Categoría</p>
+                      <p className="font-medium">{detailJob.category.name}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Info del cliente */}
+                {detailJob.client && (
+                  <div className="rounded-xl border border-border bg-card p-4">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cliente</p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                        <User className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-semibold">{detailJob.client.name}</p>
+                        {detailJob.client.reputation_score && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Star className="h-3 w-3 text-amber-500" />
+                            {detailJob.client.reputation_score} reputación
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Imágenes */}
+                  {detailJob.images && detailJob.images.length > 0 && (
+                    <div>
+                      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Imágenes ({detailJob.images.length})
+                      </p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {detailJob.images.map((img) => (
+                          <a key={img.id} href={optimizeCloudinaryUrl(img.url, 1920)} target="_blank" rel="noopener noreferrer">
+                            <img
+                              src={optimizeCloudinaryUrl(img.url, 400)}
+                              alt="Imagen del trabajo"
+                              className="aspect-square w-full rounded-xl object-cover transition-opacity hover:opacity-80"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                {/* Botón cotizar desde el modal */}
+                <DialogFooter>
+                  {yaCotice ? (
+                    <Button className="w-full rounded-xl" disabled>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Ya enviaste una oferta
+                    </Button>
+                  ) : quota?.can_bid ? (
+                    <Button
+                      className="w-full rounded-xl font-semibold"
+                      disabled={!isVerified || loadingQuota}
+                      onClick={() => {
+                        setShowDetailModal(false)
+                        handleCotizar(detailJob)
+                      }}
+                    >
+                      <Send className="mr-2 h-4 w-4" />
+                      Cotizar este trabajo
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full rounded-xl font-semibold"
+                      variant="outline"
+                      onClick={() => router.push('/dashboard/tecnico/creditos')}
+                    >
+                      <Zap className="mr-2 h-4 w-4 text-primary" />
+                      Comprar créditos para cotizar
+                    </Button>
+                  )}
+                </DialogFooter>
+              </div>
+            )
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Modal de cotización ── */}
       <Dialog open={showBidModal} onOpenChange={setShowBidModal}>
         <DialogContent className="rounded-2xl sm:max-w-lg">
           <DialogHeader>
@@ -457,57 +569,28 @@ export default function TecnicoDashboard() {
                   {bidErrors.general}
                 </div>
               )}
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Monto (USD)</Label>
-                  <Input
-                    type="number"
-                    value={bidForm.amount}
-                    onChange={(e) => setBidForm({ ...bidForm, amount: e.target.value })}
-                    className="rounded-xl"
-                  />
+                  <Input type="number" value={bidForm.amount} onChange={(e) => setBidForm({ ...bidForm, amount: e.target.value })} className="rounded-xl" />
                 </div>
-
                 <div className="space-y-2">
                   <Label>Días estimados</Label>
-                  <Input
-                    type="number"
-                    value={bidForm.estimated_days}
-                    onChange={(e) => setBidForm({ ...bidForm, estimated_days: e.target.value })}
-                    className="rounded-xl"
-                  />
+                  <Input type="number" value={bidForm.estimated_days} onChange={(e) => setBidForm({ ...bidForm, estimated_days: e.target.value })} className="rounded-xl" />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label>Fecha de disponibilidad</Label>
-                <Input
-                  type="date"
-                  value={bidForm.availability_date}
-                  onChange={(e) => setBidForm({ ...bidForm, availability_date: e.target.value })}
-                  className="rounded-xl"
-                  min={new Date().toISOString().split('T')[0]} // no permite fechas pasadas
-                />
+                <Input type="date" value={bidForm.availability_date} onChange={(e) => setBidForm({ ...bidForm, availability_date: e.target.value })} className="rounded-xl" min={new Date().toISOString().split('T')[0]} />
               </div>
-
               <div className="space-y-2">
                 <Label>Propuesta</Label>
-                <Textarea
-                  rows={4}
-                  value={bidForm.proposal}
-                  onChange={(e) => setBidForm({ ...bidForm, proposal: e.target.value })}
-                  className="rounded-xl"
-                />
+                <Textarea rows={4} value={bidForm.proposal} onChange={(e) => setBidForm({ ...bidForm, proposal: e.target.value })} className="rounded-xl" />
               </div>
-
               <DialogFooter>
                 <Button onClick={handleSubmitBid} disabled={submitting} className="w-full rounded-xl">
                   {submitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Enviando...
-                    </>
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</>
                   ) : (
                     "Confirmar Cotización"
                   )}

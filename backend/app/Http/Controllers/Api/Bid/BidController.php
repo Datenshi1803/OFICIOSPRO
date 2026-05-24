@@ -16,76 +16,59 @@ class BidController extends Controller
     ) {}
 
     /**
-     * POST /api/technician/cotizaciones
-     * Técnico envía una cotización a un trabajo publicado.
-     */
-    public function store(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'job_id'            => 'required|integer|exists:jobs,id',
-            'amount'            => 'required|numeric|min:1|max:99999.99|regex:/^\d+(\.\d{1,2})?$/',
-            'estimated_days'    => 'required|integer|min:1|max:365',
-            'proposal'          => 'required|string|min:20|max:500',
-            'availability_date' => 'required|date|after_or_equal:today',
-        ], [
-            'job_id.exists'                    => 'El trabajo no existe.',
-            'amount.regex'                     => 'El monto no puede tener más de 2 decimales.',
-            'proposal.min'                     => 'La propuesta debe tener al menos 20 caracteres.',
-            'proposal.max'                     => 'La propuesta no puede superar 500 caracteres.',
-            'availability_date.after_or_equal' => 'La fecha debe ser hoy o en el futuro.',
-        ]);
+ * POST /api/technician/cotizaciones
+ */
+public function store(Request $request): JsonResponse
+{
+    $data = $request->validate([
+        'job_id'            => 'required|integer|exists:jobs,id',
+        'amount'            => 'required|numeric|min:1|max:99999.99|regex:/^\d+(\.\d{1,2})?$/',
+        'estimated_days'    => 'required|integer|min:1|max:365',
+        'proposal'          => 'required|string|min:20|max:500',
+        'availability_date' => 'required|date|after_or_equal:today',
+    ], [
+        'job_id.exists'                    => 'El trabajo no existe.',
+        'amount.regex'                     => 'El monto no puede tener más de 2 decimales.',
+        'proposal.min'                     => 'La propuesta debe tener al menos 20 caracteres.',
+        'availability_date.after_or_equal' => 'La fecha debe ser hoy o en el futuro.',
+    ]);
 
-        $technician = $request->user();
-        $job        = Job::findOrFail($data['job_id']);
+    // Sanitizar proposal contra XSS
+    $data['proposal'] = strip_tags($data['proposal']);
 
-        // ── Validaciones de negocio ───────────────────────────────────────────
+    $technician = $request->user();
+    $job        = Job::findOrFail($data['job_id']);
 
-        // No puede cotizar en su propio trabajo
-        if ($technician->id === $job->client_id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No puedes cotizar en tu propio trabajo.',
-            ], 403);
-        }
+    if ($technician->id === $job->client_id) {
+        return response()->json(['success' => false, 'message' => 'No puedes cotizar en tu propio trabajo.'], 403);
+    }
 
-        // Solo trabajos en estado publicado aceptan cotizaciones
-        if ($job->status !== 'published') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Este trabajo ya no acepta cotizaciones.',
-            ], 422);
-        }
+    if ($job->status !== 'published') {
+        return response()->json(['success' => false, 'message' => 'Este trabajo ya no acepta cotizaciones.'], 422);
+    }
 
-        // Un técnico no puede cotizar dos veces en el mismo trabajo
-        $yaCotico = Bid::where('job_id', $job->id)
-            ->where('technician_id', $technician->id)
-            ->exists();
+    $yaCotico = Bid::where('job_id', $job->id)
+        ->where('technician_id', $technician->id)
+        ->exists();
 
-        if ($yaCotico) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Ya enviaste una cotización para este trabajo. Puedes editarla.',
-            ], 422);
-        }
+    if ($yaCotico) {
+        return response()->json(['success' => false, 'message' => 'Ya enviaste una cotización para este trabajo.'], 422);
+    }
 
-        // ── Validar créditos disponibles ──────────────────────────────────────
+    // ── Fix Race Condition: todo dentro de una transacción con lock ──
+    $bid = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $technician, $job) {
 
-        $availability = $this->quotaService->checkAvailability($technician);
+        $availability = $this->quotaService->checkAvailabilityWithLock($technician);
 
         if ($availability === 'none') {
-            return response()->json([
-                'success' => false,
-                'message' => 'No tienes cotizaciones disponibles. Compra créditos para continuar.',
-            ], 422);
+            throw new \Exception('No tienes cotizaciones disponibles. Compra créditos para continuar.');
         }
-
-        // ── Consumir crédito y crear cotización ───────────────────────────────
 
         $isPaidBid = $availability === 'paid';
 
         $this->quotaService->consumeCredit($technician);
 
-        $bid = Bid::create([
+        return Bid::create([
             'job_id'            => $job->id,
             'technician_id'     => $technician->id,
             'amount'            => $data['amount'],
@@ -95,13 +78,14 @@ class BidController extends Controller
             'is_paid_bid'       => $isPaidBid,
             'status'            => 'pending',
         ]);
+    });
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Cotización enviada correctamente.',
-            'data'    => $bid->load('technician:id,name,avatar_url,reputation_score,jobs_completed,is_verified'),
-        ], 201);
-    }
+    return response()->json([
+        'success' => true,
+        'message' => 'Cotización enviada correctamente.',
+        'data'    => $bid->load('technician:id,name,avatar_url,reputation_score,jobs_completed,is_verified'),
+    ], 201);
+}
 
     /**
      * GET /api/technician/mis-cotizaciones
@@ -204,8 +188,18 @@ class BidController extends Controller
     /**
      * GET /api/bids/{bid}
      */
-    public function show(Bid $bid): JsonResponse
+    public function show(Request $request, Bid $bid): JsonResponse
     {
+        $user = $request->user();
+
+        // Solo el técnico dueño o el cliente del trabajo pueden ver la cotización
+        if ($user->id !== $bid->technician_id && $user->id !== $bid->job->client_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado.',
+            ], 403);
+        }
+
         return response()->json([
             'success' => true,
             'data'    => $bid->load(
