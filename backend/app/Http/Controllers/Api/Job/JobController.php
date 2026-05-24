@@ -17,18 +17,22 @@ class JobController extends Controller
     }
 
     public function available()
-    {
-        $jobs = Job::with(['client', 'category']) 
-            ->whereNull('technician_id')
-            ->where('status', 'published')
-            ->latest()
-            ->get();
+{
+    $jobs = Job::with([
+            'client:id,name,avatar_url,reputation_score,jobs_completed,provincia,distrito',
+            'category:id,name',
+            'images'
+        ])
+        ->whereNull('technician_id')
+        ->where('status', 'published')
+        ->latest()
+        ->get();
 
-        return response()->json([
-            'success' => true,
-            'data' => $jobs
-        ], 200);
-    }
+    return response()->json([
+        'success' => true,
+        'data' => $jobs
+    ], 200);
+}
 
     public function myJobs()
     {
@@ -61,33 +65,50 @@ class JobController extends Controller
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'title' => 'required|string|max:100',
-            'description' => 'required|string|max:1000',
-            'category_id' => 'required|integer',
-            'zone' => 'required|string',
-            'urgency' => 'required|in:normal,urgent,emergency',
-            'budget' => 'nullable|numeric|min:0',
+{
+   
+
+    $validated = $request->validate([
+        'title'       => 'required|string|max:100',
+        'description' => 'required|string|max:1000',
+        'category_id' => 'required|integer',
+        'zone'        => 'required|string',
+        'urgency'     => 'required|in:normal,urgent,emergency',
+        'budget'      => 'nullable|numeric|min:0',
+        'image_urls'  => 'nullable|array|max:5',        // ← agregar
+        'image_urls.*' => 'url|max:500',                // ← agregar
+    ]);
+
+
+    $validated['client_id'] = auth()->id();
+    $validated['status']    = 'published';
+    $validated['ulid']      = (string) \Illuminate\Support\Str::ulid();
+
+    $latestJob       = Job::latest('id')->first();
+    $nextId          = $latestJob ? $latestJob->id + 1 : 1;
+    $validated['code'] = 'JOB-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+
+    $imageUrls = $validated['image_urls'] ?? [];
+    unset($validated['image_urls']); // no pertenece a la tabla jobs
+
+    $job = Job::create($validated);
+
+    // Guardar imágenes en job_images
+    foreach ($imageUrls as $index => $url) {
+        \App\Models\JobImage::create([
+            'job_id'     => $job->id,
+            'url'        => $url,
+            'filename'   => basename(parse_url($url, PHP_URL_PATH)),
+            'sort_order' => $index,
         ]);
-
-        $validated['client_id'] = auth()->id();
-        $validated['status'] = 'published';
-        $validated['ulid'] = (string) \Illuminate\Support\Str::ulid();
-        
-        // Generate a unique code (e.g. JOB-1234)
-        $latestJob = Job::latest('id')->first();
-        $nextId = $latestJob ? $latestJob->id + 1 : 1;
-        $validated['code'] = 'JOB-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
-
-        $job = Job::create($validated);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Trabajo publicado exitosamente',
-            'data' => $job
-        ], 201);
     }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Trabajo publicado exitosamente',
+        'data'    => $job->load('images'),
+    ], 201);
+}
 
     /**
      * Display the specified resource.

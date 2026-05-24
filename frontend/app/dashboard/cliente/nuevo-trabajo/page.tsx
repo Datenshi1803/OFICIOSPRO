@@ -5,7 +5,6 @@ import { useState } from "react"
 import {
   Wrench,
   ArrowLeft,
-  Upload,
   X,
   MapPin,
   Clock,
@@ -24,6 +23,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useRouter } from "next/navigation"
 import { storeJob } from "@/lib/api"
 import { Loader2 } from "lucide-react"
+import { CldUploadWidget } from "next-cloudinary"
 
 const zonasPanama = [
   "Panamá Centro",
@@ -64,36 +64,13 @@ export default function NuevoTrabajoPage() {
     direccion: "",
     urgencia: "normal" as 'normal' | 'urgent' | 'emergency',
     presupuesto: "",
-    imagenes: [] as File[],
   })
   const [previewImages, setPreviewImages] = useState<string[]>([])
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length + formData.imagenes.length > 5) {
-      alert("Máximo 5 imágenes permitidas")
-      return
-    }
-
-    const newImages = [...formData.imagenes, ...files].slice(0, 5)
-    setFormData({ ...formData, imagenes: newImages })
-
-    // Generate previews
-    files.forEach((file) => {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPreviewImages((prev) => [...prev, reader.result as string].slice(0, 5))
-      }
-      reader.readAsDataURL(file)
-    })
-  }
+  const [uploadedUrls, setUploadedUrls] = useState<string[]>([])
 
   const removeImage = (index: number) => {
-    setFormData({
-      ...formData,
-      imagenes: formData.imagenes.filter((_, i) => i !== index),
-    })
     setPreviewImages((prev) => prev.filter((_, i) => i !== index))
+    setUploadedUrls((prev) => prev.filter((_, i) => i !== index))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -102,34 +79,35 @@ export default function NuevoTrabajoPage() {
       setStep(2)
     } else if (step === 2) {
       setStep(3)
-    } else {
-      setIsLoading(true)
-      setError("")
+    }  else {
+  setIsLoading(true)
+  setError("")
 
-      // Map category string to category_id
-      const categoryMap: Record<string, number> = {
-        'mantenimiento': 1,
-        'reparacion': 2,
-        'instalacion': 3,
-        'limpieza': 4,
-        'recarga': 5,
-        'diagnostico': 2
-      }
+  const categoryMap: Record<string, number> = {
+    'mantenimiento': 1,
+    'reparacion': 2,
+    'instalacion': 3,
+    'limpieza': 4,
+    'recarga': 5,
+    'diagnostico': 2
+  }
 
-      const category_id = categoryMap[formData.categoria] || 1
+  const category_id = categoryMap[formData.categoria] || 1
 
-      try {
-        await storeJob({
-          title: formData.titulo,
-          description: formData.descripcion + (formData.direccion ? `\n\nDirección: ${formData.direccion}` : ''),
-          category_id,
-          zone: formData.zona,
-          urgency: formData.urgencia,
-          budget: formData.presupuesto ? parseFloat(formData.presupuesto) : null
-        })
+  try {
+    console.log('URLs a enviar:', uploadedUrls) // ← agregar aquí
+    await storeJob({
+      title: formData.titulo,
+      description: formData.descripcion + (formData.direccion ? `\n\nDirección: ${formData.direccion}` : ''),
+      category_id,
+      zone: formData.zona,
+      urgency: formData.urgencia,
+      budget: formData.presupuesto ? parseFloat(formData.presupuesto) : null,
+      image_urls: uploadedUrls,
+    })
 
-        router.push('/dashboard/cliente/trabajos')
-      } catch (err: any) {
+    router.push('/dashboard/cliente/trabajos')
+  } catch (err: any) {
         setError(err.message || 'Error al publicar el trabajo')
         setIsLoading(false)
       }
@@ -265,27 +243,38 @@ export default function NuevoTrabajoPage() {
 
                 <div className="space-y-2">
                   <Label>Imágenes (opcional)</Label>
-                  <div className="rounded-lg border-2 border-dashed border-input p-6 text-center">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      id="images"
-                      onChange={handleImageUpload}
-                    />
-                    <label htmlFor="images" className="cursor-pointer">
-                      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
-                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                  <CldUploadWidget
+                    uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET}
+                    options={{
+                      maxFiles: 5,
+                      multiple: true,
+                      folder: 'oficiospro/jobs',
+                      clientAllowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
+                      maxFileSize: 5000000,
+                    }}
+                    onSuccess={(result: any) => {
+                      const url = result.info.secure_url
+                      setUploadedUrls((prev) => [...prev, url].slice(0, 5))
+                      setPreviewImages((prev) => [...prev, url].slice(0, 5))
+                    }}
+                  >
+                    {({ open }) => (
+                      <div
+                        onClick={() => open()}
+                        className="cursor-pointer rounded-lg border-2 border-dashed border-input p-6 text-center hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+                          <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                        <p className="text-sm font-medium text-foreground">
+                          Haz clic para subir imágenes
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Máximo 5 imágenes, 5MB cada una — JPG, PNG, WebP
+                        </p>
                       </div>
-                      <p className="text-sm font-medium text-foreground">
-                        Arrastra imágenes aquí o haz clic para subir
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Máximo 5 imágenes, 5MB cada una
-                      </p>
-                    </label>
-                  </div>
+                    )}
+                  </CldUploadWidget>
 
                   {previewImages.length > 0 && (
                     <div className="mt-4 grid grid-cols-5 gap-2">
