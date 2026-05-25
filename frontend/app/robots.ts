@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next"
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = "https://oficios-pro.com"
+  const baseUrl = "https://oficiospro.com"
 
   return {
     rules: [
@@ -9,10 +9,10 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: "/",
         disallow: [
+          "/login",
+          "/registro",
+          "/dashboard",
           "/dashboard/",
-          "/admin/",
-          "/api/",
-          "/recuperar-password",
         ],
       },
     ],

@@ -2,8 +2,9 @@
 
 import { Suspense, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Wrench, Eye, EyeOff, Mail, Lock, ArrowLeft, Loader2 } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, ArrowLeft, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,7 +13,17 @@ import { Separator } from "@/components/ui/separator"
 import { loginUser } from "@/lib/api"
 import { useAuth } from "@/hooks/use-auth"
 
-// Componente interno que usa useSearchParams
+// ─── SEO METADATA ─────────────────────────────────────────────────────────────
+// Nota: como este archivo es "use client", el metadata debe ir en un
+// layout.tsx padre o en un archivo separado. Aquí lo dejamos documentado:
+//
+// export const metadata = {
+//   title: "Iniciar Sesión | OficiosPro",
+//   description: "Accede a tu cuenta en OficiosPro y conecta con técnicos verificados de aire acondicionado en Panamá.",
+//   robots: { index: false, follow: false }, // no indexar páginas de auth
+// }
+
+// ─── LOGIN FORM ───────────────────────────────────────────────────────────────
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -41,7 +52,6 @@ function LoginForm() {
 
       if (response.token && response.user) {
         login(response.token, response.user)
-
         if (redirectParam && redirectParam !== "/login") {
           router.push(redirectParam)
         }
@@ -89,7 +99,10 @@ function LoginForm() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Contraseña</Label>
-                <Link href="/recuperar-password" className="text-xs text-primary hover:underline">
+                <Link
+                  href="/recuperar-password"
+                  className="text-xs text-primary hover:underline"
+                >
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
@@ -100,12 +113,14 @@ function LoginForm() {
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   className="pl-10 pr-10"
+                  autoComplete="current-password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
                 />
                 <button
                   type="button"
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   onClick={() => setShowPassword(!showPassword)}
                 >
@@ -146,23 +161,11 @@ function LoginForm() {
             </div>
 
             <Button type="button" variant="outline" className="w-full gap-2">
-              <svg className="h-4 w-4" viewBox="0 0 24 24">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
+              <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
               </svg>
               Continuar con Google
             </Button>
@@ -180,19 +183,28 @@ function LoginForm() {
   )
 }
 
-// Page principal — envuelve LoginForm en Suspense
+// ─── PAGE ─────────────────────────────────────────────────────────────────────
 export default function LoginPage() {
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Left Panel - Branding (hidden on mobile) */}
+
+      {/* LEFT PANEL — Branding (oculto en mobile) */}
       <div className="relative hidden w-1/2 bg-sidebar lg:block">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.2),transparent_50%)]" />
+       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.2),transparent_50%)] pointer-events-none" />
         <div className="flex h-full flex-col justify-between p-12">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
-              <Wrench className="h-6 w-6 text-sidebar-primary-foreground" />
-            </div>
-            <span className="text-2xl font-bold text-sidebar-foreground">OficiosPro</span>
+ 
+          {/* Logo modo oscuro */}
+          <Link href="/" className="flex items-center gap-0" aria-label="Volver al inicio de OficiosPro">
+            <Image
+              src="/engranaje.svg"
+              alt="Logo OficiosPro"
+              width={36}
+              height={36}
+              className="-mr-1"
+            />
+            <span className="text-2xl font-black tracking-tight text-white">
+              ficios<span className="text-blue-400">Pro</span>
+            </span>
           </Link>
 
           <div className="space-y-6">
@@ -206,28 +218,38 @@ export default function LoginPage() {
           </div>
 
           <p className="text-sm text-sidebar-foreground/50">
-            &copy; 2025 OficiosPro. Panamá.
+            &copy; 2026 OficiosPro. Panamá.
           </p>
         </div>
       </div>
 
-      {/* Right Panel - Login Form */}
+      {/* RIGHT PANEL — Formulario */}
       <div className="flex w-full flex-col lg:w-1/2">
+
         {/* Mobile Header */}
         <div className="flex items-center justify-between border-b border-border p-4 lg:hidden">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <Wrench className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold text-foreground">OficiosPro</span>
+          <Link href="/" className="flex items-center gap-0" aria-label="Volver al inicio de OficiosPro">
+            <Image
+              src="/engranaje.svg"
+              alt="Logo OficiosPro"
+              width={28}
+              height={28}
+              className="-mr-1"
+            />
+            <span className="text-xl font-black tracking-tight text-foreground">
+              Oficios<span className="text-blue-500">Pro</span>
+            </span>
           </Link>
-          <Link href="/" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <Link
+            href="/"
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="h-4 w-4" />
             Volver
           </Link>
         </div>
 
-        {/* Suspense boundary requerido por useSearchParams */}
+        {/* Suspense requerido por useSearchParams */}
         <Suspense
           fallback={
             <div className="flex flex-1 items-center justify-center">
