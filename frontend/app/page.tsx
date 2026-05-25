@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useEffect, useState } from "react"
 import {
   Wrench, Shield, Star, Users, ArrowRight, Clock, Briefcase,
@@ -203,25 +204,16 @@ export default function LandingPage() {
     <div className="absolute top-16 right-36 w-[220px] h-[220px] bg-blue-200/20 blur-3xl rounded-full" />
 
     {/* Imagen principal */}
-    <img
+    <Image
   src="/fondoTec.png"
   alt="Técnico profesional de aire acondicionado"
-  className="
-    relative
-    z-10
-    w-[115%]
-    lg:w-[128%]
-    max-w-[980px]
-    lg:max-w-[1100px]
-    h-auto
-    object-contain
-    -translate-y-20
-    lg:-translate-y-28
-    drop-shadow-[0_40px_60px_rgba(0,0,0,0.20)]
-    transition-all
-    duration-500
-    hover:scale-[1.02]
-  "
+  width={1100}
+  height={900}
+  priority
+  className="relative z-10 w-[115%] lg:w-[128%] max-w-[980px] lg:max-w-[1100px] 
+             h-auto object-contain -translate-y-20 lg:-translate-y-28 
+             drop-shadow-[0_40px_60px_rgba(0,0,0,0.20)] transition-all 
+             duration-500 hover:scale-[1.02]"
 />
 
     {/* Tarjeta flotante superior */}
@@ -595,28 +587,52 @@ export default function LandingPage() {
             </div>
 
             {[
-              { title: "Plataforma", links: ["Servicios", "Cómo funciona", "Precios", "Soporte técnico"] },
-              { title: "Para técnicos", links: ["Registrarse", "Beneficios", "Requisitos", "Centro de ayuda"] },
-              { title: "Legal", links: ["Términos y condiciones", "Política de privacidad", "Aviso legal", "Cookies"] },
-            ].map((col, i) => (
-              <div key={i}>
-                <h4 className="font-bold text-white mb-5 uppercase text-xs tracking-wider">
-                  {col.title}
-                </h4>
-                <ul className="space-y-3">
-                  {col.links.map((item) => (
-                    <li key={item}>
-                      <Link
-                        href="#"
-                        className="text-slate-400 text-sm hover:text-cyan-300 transition-colors"
-                      >
-                        {item}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+  {
+    title: "Plataforma",
+    links: [
+      ["#servicios", "Servicios"],
+      ["#como-funciona", "Cómo funciona"],
+      ["#", "Precios"],
+      ["#", "Soporte técnico"],
+    ],
+  },
+  {
+    title: "Para técnicos",
+    links: [
+      ["/registro?tipo=tecnico", "Registrarse"],
+      ["#tecnicos", "Beneficios"],
+      ["#", "Requisitos"],
+      ["#", "Centro de ayuda"],
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      ["/terminos-condiciones", "Términos y condiciones"],
+      ["/politica-privacidad", "Política de privacidad"],
+      ["/aviso-legal", "Aviso legal"],
+      ["/cookies", "Cookies"],
+    ],
+  },
+].map((col, i) => (
+  <div key={i}>
+    <h4 className="font-bold text-white mb-5 uppercase text-xs tracking-wider">
+      {col.title}
+    </h4>
+    <ul className="space-y-3">
+      {col.links.map(([href, label]) => (
+        <li key={label}>
+          <Link
+            href={href}
+            className="text-slate-400 text-sm hover:text-cyan-300 transition-colors"
+          >
+            {label}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  </div>
+))}
           </div>
 
           <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-5">
