@@ -134,6 +134,27 @@ export default function TecnicoDashboard() {
 
   async function handleSubmitBid() {
     if (!selectedJob) return
+    
+    // Validar campos
+    const errors: Record<string, string> = {}
+    
+    if (!bidForm.amount || parseFloat(bidForm.amount) <= 0) {
+      errors.amount = "El monto debe ser mayor a 0"
+    }
+    
+    if (!bidForm.estimated_days || parseInt(bidForm.estimated_days) <= 0) {
+      errors.estimated_days = "Los días estimados deben ser mayor a 0"
+    }
+    
+    if (!bidForm.proposal || bidForm.proposal.trim().length < 20) {
+      errors.proposal = "La propuesta debe tener al menos 20 caracteres"
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setBidErrors(errors)
+      return
+    }
+    
     setBidErrors({})
     setSubmitting(true)
     try {
@@ -572,20 +593,46 @@ export default function TecnicoDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Monto (USD)</Label>
-                  <Input type="number" value={bidForm.amount} onChange={(e) => setBidForm({ ...bidForm, amount: e.target.value })} className="rounded-xl" />
+                  <Input 
+                    type="number" 
+                    value={bidForm.amount} 
+                    onChange={(e) => setBidForm({ ...bidForm, amount: e.target.value })} 
+                    className={`rounded-xl ${bidErrors.amount ? "border-red-500" : ""}`}
+                  />
+                  {bidErrors.amount && <p className="text-xs text-red-500">{bidErrors.amount}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label>Días estimados</Label>
-                  <Input type="number" value={bidForm.estimated_days} onChange={(e) => setBidForm({ ...bidForm, estimated_days: e.target.value })} className="rounded-xl" />
+                  <Input 
+                    type="number" 
+                    value={bidForm.estimated_days} 
+                    onChange={(e) => setBidForm({ ...bidForm, estimated_days: e.target.value })} 
+                    className={`rounded-xl ${bidErrors.estimated_days ? "border-red-500" : ""}`}
+                  />
+                  {bidErrors.estimated_days && <p className="text-xs text-red-500">{bidErrors.estimated_days}</p>}
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Fecha de disponibilidad</Label>
-                <Input type="date" value={bidForm.availability_date} onChange={(e) => setBidForm({ ...bidForm, availability_date: e.target.value })} className="rounded-xl" min={new Date().toISOString().split('T')[0]} />
+                <Input 
+                  type="date" 
+                  value={bidForm.availability_date} 
+                  onChange={(e) => setBidForm({ ...bidForm, availability_date: e.target.value })} 
+                  className="rounded-xl" 
+                  min={new Date().toISOString().split('T')[0]} 
+                />
               </div>
               <div className="space-y-2">
                 <Label>Propuesta</Label>
-                <Textarea rows={4} value={bidForm.proposal} onChange={(e) => setBidForm({ ...bidForm, proposal: e.target.value })} className="rounded-xl" />
+                <Textarea 
+                  rows={4} 
+                  value={bidForm.proposal} 
+                  onChange={(e) => setBidForm({ ...bidForm, proposal: e.target.value.slice(0, 500) })} 
+                  className={`rounded-xl ${bidErrors.proposal ? "border-red-500" : ""}`}
+                  maxLength={500}
+                />
+                {bidErrors.proposal && <p className="text-xs text-red-500">{bidErrors.proposal}</p>}
+                <p className="text-xs text-muted-foreground">{bidForm.proposal.length}/500 caracteres</p>
               </div>
               <DialogFooter>
                 <Button onClick={handleSubmitBid} disabled={submitting} className="w-full rounded-xl">

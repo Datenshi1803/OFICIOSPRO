@@ -9,6 +9,32 @@ class TechnicianQuotaService
 {
     /**
      * Verifica si el técnico puede cotizar y con qué tipo de crédito.
+     * Usa lock pessimista para evitar race conditions.
+     * Retorna: 'free' | 'paid' | 'none'
+     */
+    public function checkAvailabilityWithLock(User $technician): string
+    {
+        $quota = TechnicianQuota::where('technician_id', $technician->id)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$quota) {
+            $quota = $this->getOrCreateQuota($technician);
+        }
+
+        if ($quota->free_bids_used < $quota->free_bids_per_week) {
+            return 'free';
+        }
+
+        if ($quota->paid_bids_remaining > 0) {
+            return 'paid';
+        }
+
+        return 'none';
+    }
+
+    /**
+     * Verifica si el técnico puede cotizar y con qué tipo de crédito.
      * Retorna: 'free' | 'paid' | 'none'
      */
     public function checkAvailability(User $technician): string

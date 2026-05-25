@@ -184,7 +184,33 @@ export default function PoliticaPrivacidadPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-black text-slate-900 mb-3">7. Seguridad de los datos</h2>
+            <h2 className="text-2xl font-black text-slate-900 mb-3">7. Verificación de seguridad (Turnstile)</h2>
+            <p className="mb-4">
+              Para proteger nuestros formularios de registro contra bots y uso automatizado, utilizamos{" "}
+              <strong>Cloudflare Turnstile</strong>, un servicio de verificación invisible que no requiere que
+              el usuario resuelva ningún desafío visual.
+            </p>
+            <p className="mb-4">
+              Cloudflare Turnstile puede recopilar información técnica del dispositivo y la sesión del usuario
+              con el único propósito de verificar que se trata de un humano. Esta información es procesada por
+              Cloudflare conforme a su política de privacidad.
+            </p>
+            <p>
+              Para más información, consulta el{" "}
+              <a
+                href="https://trust.cloudflare.com/cdn-cgi/content/privacyannex_es/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline font-semibold"
+              >
+                Anexo de privacidad de Turnstile
+              </a>
+              {" "}de Cloudflare.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-black text-slate-900 mb-3">8. Seguridad de los datos</h2>
             <p className="mb-4">
               Implementamos medidas técnicas y organizativas para proteger tus datos conforme al
               artículo 22 de la Ley 81:
@@ -204,7 +230,7 @@ export default function PoliticaPrivacidadPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-black text-slate-900 mb-3">8. Tus derechos (ARCOP)</h2>
+            <h2 className="text-2xl font-black text-slate-900 mb-3">9. Tus derechos (ARCOP)</h2>
             <p className="mb-4">
               Conforme al Capítulo III de la <strong>Ley 81 de 2019</strong>, tienes los siguientes
               derechos sobre tus datos personales, conocidos como derechos ARCOP:
@@ -243,7 +269,7 @@ export default function PoliticaPrivacidadPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-black text-slate-900 mb-3">9. Menores de edad</h2>
+            <h2 className="text-2xl font-black text-slate-900 mb-3">10. Menores de edad</h2>
             <p>
               OficiosPro no está dirigida a menores de 18 años. No recopilamos conscientemente datos
               de menores. Si detectamos que un menor se ha registrado, eliminaremos su cuenta y datos
@@ -256,7 +282,7 @@ export default function PoliticaPrivacidadPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-black text-slate-900 mb-3">10. Cambios en esta política</h2>
+            <h2 className="text-2xl font-black text-slate-900 mb-3">11. Cambios en esta política</h2>
             <p>
               Podemos actualizar esta Política de Privacidad para reflejar cambios legales o en
               nuestros servicios. Te notificaremos por correo electrónico con al menos{" "}
@@ -266,7 +292,7 @@ export default function PoliticaPrivacidadPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-black text-slate-900 mb-3">11. Autoridad de control</h2>
+            <h2 className="text-2xl font-black text-slate-900 mb-3">12. Autoridad de control</h2>
             <p>
               Si consideras que el tratamiento de tus datos no es conforme a la Ley 81 de 2019,
               puedes presentar una reclamación ante la{" "}
