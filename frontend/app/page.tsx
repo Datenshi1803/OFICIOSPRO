@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
+import Header from "@/components/Header"
 import { useEffect, useState } from "react"
 import {
   Wrench, Shield, Star, Users, ArrowRight, Clock, Briefcase,
@@ -25,92 +26,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-200 selection:text-blue-900">
       
       {/* HEADER FLOTANTE */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex justify-center px-4 pt-5">
-        <div
-          className={`w-full max-w-[1440px] transition-all duration-500 rounded-[22px] border border-white/70 ${
-            isScrolled
-              ? "bg-white/90 backdrop-blur-xl shadow-xl shadow-slate-200/60 py-4 px-7"
-              : "bg-white/85 backdrop-blur-xl shadow-lg shadow-slate-200/40 py-4 px-7"
-          }`}
-        >
-          <div className="grid grid-cols-3 items-center">
-            
-            {/* LOGO IZQUIERDA */}
-            <Link href="/" className="flex items-center gap-3 group justify-self-start">
-              {/* <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-300/40">
-                <Wrench className="w-5 h-5 text-white" />
-              </div> */}
-              <span className="text-2xl font-black tracking-tight text-slate-900">
-                Oficios<span className="text-blue-600">Pro</span>
-              </span>
-            </Link>
-
-            {/* NAV CENTRADO */}
-            <nav className="hidden md:flex items-center justify-center gap-12">
-              {[
-                ["#servicios", "Servicios"],
-                ["#como-funciona", "Cómo funciona"],
-                ["#tecnicos", "Para técnicos"],
-              ].map(([href, label]) => (
-                <Link
-                  key={label}
-                  href={href}
-                  className="text-[15px] font-semibold text-slate-800 hover:text-blue-600 transition-colors"
-                >
-                  {label}
-                </Link>
-              ))}
-            </nav>
-
-            {/* BOTONES DERECHA */}
-            <div className="hidden md:flex items-center justify-end gap-7">
-              <Link
-                href="/login"
-                className="text-[15px] font-semibold text-slate-800 hover:text-blue-600 transition-colors"
-              >
-                Iniciar sesión
-              </Link>
-
-              <Link
-                href="/registro"
-                className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-[15px] font-bold hover:shadow-xl hover:shadow-blue-300/40 transition-all"
-              >
-                Registrarse
-              </Link>
-            </div>
-
-            {/* MOBILE */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden col-start-3 justify-self-end p-2 rounded-lg bg-slate-100 text-slate-700"
-              aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
-
-          {mobileMenuOpen && (
-            <div className="md:hidden pt-4 pb-2 flex flex-col gap-3 border-t border-slate-100 mt-4">
-              {[
-                ["#servicios", "Servicios"],
-                ["#como-funciona", "Cómo funciona"],
-                ["#tecnicos", "Para técnicos"],
-                ["/login", "Iniciar sesión"],
-                ["/registro", "Registrarse"],
-              ].map(([href, label]) => (
-                <Link
-                  key={label}
-                  href={href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-sm font-medium text-slate-700 hover:text-blue-600 transition-colors py-1"
-                >
-                  {label}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      </header>
+      <Header />
 
       {/* HERO SECTION */}
       <section className="relative overflow-hidden pt-36 pb-16 lg:pt-44 lg:pb-24">

@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Wrench } from "lucide-react"
+import HeaderLegal from "@/components/HeaderLegal"
 
 export const metadata = {
   title: "Aviso Legal | OficiosPro",
@@ -11,21 +12,7 @@ export default function AvisoLegalPage() {
     <div className="min-h-screen bg-white text-slate-900 font-sans">
 
       {/* HEADER */}
-      <header className="border-b border-slate-100 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center">
-              <Wrench className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-xl font-black tracking-tight">
-              Oficios<span className="text-blue-600">Pro</span>
-            </span>
-          </Link>
-          <Link href="/" className="text-sm text-slate-500 hover:text-blue-600 transition-colors">
-            ← Volver al inicio
-          </Link>
-        </div>
-      </header>
+      <HeaderLegal />
 
       {/* CONTENIDO */}
       <main className="max-w-4xl mx-auto px-6 py-16">

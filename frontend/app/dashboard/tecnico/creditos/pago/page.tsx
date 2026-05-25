@@ -25,7 +25,6 @@ export default function PagoPage() {
     setPaymentData(JSON.parse(stored));
   }, []);
 
-  // Limpiar el intervalo al desmontar
   useEffect(() => {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
@@ -54,6 +53,9 @@ export default function PagoPage() {
         throw new Error(result.message ?? 'No se pudo generar el enlace de pago');
       }
 
+      // ✅ Guarda el code LK- para confirmación posterior
+      sessionStorage.setItem('pf_link_code', result.data.code);
+
       openPopup(result.data.url);
 
     } catch (err: any) {
@@ -63,7 +65,6 @@ export default function PagoPage() {
   };
 
   const openPopup = (url: string) => {
-    // Centrar el popup en la pantalla
     const w = 520, h = 680;
     const left = window.screenX + (window.outerWidth  - w) / 2;
     const top  = window.screenY + (window.outerHeight - h) / 2;
@@ -75,7 +76,6 @@ export default function PagoPage() {
     );
 
     if (!popup) {
-      // El navegador bloqueó el popup
       setError(
         'Tu navegador bloqueó la ventana de pago. ' +
         'Permite ventanas emergentes para este sitio e intenta nuevamente.'
@@ -87,41 +87,49 @@ export default function PagoPage() {
     popupRef.current = popup;
     setStage('waiting');
 
-    // Vigilar el popup hasta que navegue a nuestra URL de retorno
-    const retornoPath = '/dashboard/tecnico/creditos/retorno';
-
     pollRef.current = setInterval(() => {
       try {
-        // Si el popup fue cerrado manualmente por el usuario
         if (popup.closed) {
           clearInterval(pollRef.current!);
           setStage('summary');
           return;
         }
 
-        // Cuando el popup navega a nuestro dominio podemos leer su URL
         const popupUrl = popup.location.href;
 
-        if (popupUrl.includes(retornoPath)) {
+        // ✅ Detecta tanto /exitoso (demo) como /retorno (producción)
+        if (
+          popupUrl.includes('/creditos/exitoso') ||
+          popupUrl.includes('/creditos/retorno')
+        ) {
           clearInterval(pollRef.current!);
-          const params = new URL(popupUrl).searchParams;
           popup.close();
 
-          const oper   = params.get('Oper')   ?? params.get('oper');
-          const estado = params.get('Estado') ?? params.get('estado');
-          const total  = params.get('TotalPagado') ?? params.get('totalpagado');
-          const razon  = params.get('Razon')  ?? params.get('razon') ?? '';
+          // Intenta leer params (producción los manda, demo no)
+          const params = new URL(popupUrl).searchParams;
+          const operFromParams = params.get('Oper') ?? params.get('oper');
+          const estadoFromParams = params.get('Estado') ?? params.get('estado');
 
-          if (oper && estado !== 'Denegada' && total !== '0') {
-            confirmPayment(oper);
+          // Si vienen params y fue denegada
+          if (estadoFromParams === 'Denegada' || estadoFromParams === 'Denied') {
+            const razon = params.get('Razon') ?? 'El pago fue rechazado.';
+            setStage('error');
+            setError(razon);
+            return;
+          }
+
+          // Usa el Oper de los params si viene (producción), si no usa el LK- guardado (demo)
+          const code = operFromParams ?? sessionStorage.getItem('pf_link_code');
+
+          if (code) {
+            confirmPayment(code);
           } else {
             setStage('error');
-            setError(razon || 'El pago fue rechazado. Verifica los datos de tu tarjeta.');
+            setError('No se pudo identificar la operación. Contacta soporte.');
           }
         }
       } catch {
-        // Error de cross-origin normal mientras el popup está en paguelofacil.com
-        // Se ignora — solo podemos leer la URL cuando vuelve a nuestro dominio
+        // cross-origin mientras está en paguelofacil.com — normal, ignorar
       }
     }, 500);
   };
@@ -145,15 +153,18 @@ export default function PagoPage() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.message ?? 'Error al confirmar');
 
+      // ✅ Guarda el resultado para mostrarlo en /exitoso
       sessionStorage.removeItem('pending_payment');
+      sessionStorage.removeItem('pf_link_code');
       sessionStorage.setItem('payment_result', JSON.stringify(result.data));
+
       router.push('/dashboard/tecnico/creditos/exitoso');
 
     } catch (err: any) {
       setStage('error');
       setError(
         `Tu pago fue procesado pero hubo un error al acreditar. ` +
-        `Contacta soporte. (Oper: ${oper})`
+        `Contacta soporte. (Ref: ${oper})`
       );
     }
   };
@@ -163,21 +174,18 @@ export default function PagoPage() {
   return (
     <main className="mx-auto max-w-lg px-4 py-10">
 
-      {/* Resumen */}
       <div className="mb-6 rounded-2xl border bg-card p-5">
         <h2 className="text-lg font-bold">Resumen del pedido</h2>
         <p className="mt-1 text-muted-foreground">{paymentData.description}</p>
         <p className="mt-3 text-3xl font-black">${paymentData.amount} USD</p>
       </div>
 
-      {/* Error */}
       {stage === 'error' && (
         <div className="mb-4 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
           {error}
         </div>
       )}
 
-      {/* Botón de pago */}
       {(stage === 'summary' || stage === 'error') && (
         <>
           <button
@@ -195,7 +203,6 @@ export default function PagoPage() {
         </>
       )}
 
-      {/* Cargando enlace */}
       {stage === 'loading' && (
         <div className="flex flex-col items-center py-10">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -203,7 +210,6 @@ export default function PagoPage() {
         </div>
       )}
 
-      {/* Esperando que el usuario complete el pago en el popup */}
       {stage === 'waiting' && (
         <div className="flex flex-col items-center rounded-2xl border bg-card px-6 py-10 text-center">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -226,7 +232,6 @@ export default function PagoPage() {
         </div>
       )}
 
-      {/* Confirmando con el backend */}
       {stage === 'confirming' && (
         <div className="flex flex-col items-center py-10">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
