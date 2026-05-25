@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\TechnicianQuota;
 use App\Models\User;
+use App\Rules\TurnstileValid;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -66,83 +67,114 @@ class AuthController extends Controller
         ]);
     }
 
-    // =========================================================
-    // REGISTRO
-    // =========================================================
     public function register(Request $request): JsonResponse
     {
-        $request->validate([
-            'name'             => 'required|string|max:150',
-            'email'            => 'required|email|unique:users,email',
-            'password'         => 'required|string|min:8|regex:/^(?=.*[A-Z])(?=.*\d).+$/',
-            'role'             => 'required|in:client,technician',
-            'phone'            => 'nullable|string|max:20',
-            'avatar_url'       => 'nullable|url|max:500',
-            'bio'              => 'nullable|string|max:500',
-            'provincia'        => 'nullable|string|max:100',
-            'distrito'         => 'nullable|string|max:100',
-            'corregimiento'    => 'nullable|string|max:100',
+        try {
+            $request->validate([
+                'captchaToken'     => ['required', new TurnstileValid],  // Verificación Cloudflare Turnstile
+                'name'             => 'required|string|max:150',
+                'email'            => 'required|email|unique:users,email',
+                'password'         => 'required|string|min:8|regex:/^(?=.*[A-Z])(?=.*\d).+$/',
+                'role'             => 'required|in:client,technician',
+                'phone'            => 'nullable|string|max:20',
+                'avatar_url'       => 'nullable|url|max:500',
+                'bio'              => 'nullable|string|max:500',
+                'provincia'        => 'nullable|string|max:100',
+                'distrito'         => 'nullable|string|max:100',
+                'corregimiento'    => 'nullable|string|max:100',
 
-            // Solo técnicos
-            'cedula'           => 'required_if:role,technician|string|max:20',
-            'specialty'        => 'required_if:role,technician|string|max:100',
-            'experience_years' => 'required_if:role,technician|integer|min:0|max:50',
-            'description'      => 'nullable|string|max:1000',
-            'hourly_rate'      => 'nullable|numeric|min:0',
-        ], [
-            'email.unique'             => 'Este correo ya está registrado.',
-            'password.regex'           => 'La contraseña debe tener al menos una mayúscula y un número.',
-            'cedula.required_if'       => 'La cédula es obligatoria para técnicos.',
-            'specialty.required_if'    => 'La especialidad es obligatoria para técnicos.',
-            'experience_years.required_if' => 'Los años de experiencia son obligatorios para técnicos.',
-        ]);
-
-        $user = User::create([
-            'name'             => strip_tags($request->name),
-            'email'            => strtolower(trim($request->email)),
-            'password'         => Hash::make($request->password),
-            'role'             => strip_tags($request->role),
-            'is_active'        => true,
-            'phone'            => preg_replace('/[^0-9+\-\s]/', '', $request->phone),
-            'avatar_url'       => $request->avatar_url,
-            'bio'              => strip_tags($request->bio),
-            'provincia'        => strip_tags($request->provincia),
-            'distrito'         => strip_tags($request->distrito),
-            'corregimiento'    => strip_tags($request->corregimiento),
-            'cedula'           => strip_tags($request->cedula),
-            'specialty'        => strip_tags($request->specialty),
-            'description'      => strip_tags($request->description),
-            'experience_years' => $request->experience_years,
-            'hourly_rate'      => $request->hourly_rate,
-        ]);
-
-        // Crear cuota semanal automáticamente para técnicos
-        if ($user->role === 'technician') {
-            TechnicianQuota::create([
-                'technician_id'       => $user->id,
-                'free_bids_per_week'  => 2,
-                'free_bids_used'      => 0,
-                'paid_bids_remaining' => 0,
-                'week_reset_at'       => now()->next('Monday')->startOfDay(),
+                // Solo técnicos
+                'cedula'           => 'required_if:role,technician|string|max:20',
+                'specialty'        => 'required_if:role,technician|string|max:100',
+                'experience_years' => 'required_if:role,technician|integer|min:0|max:50',
+                'description'      => 'nullable|string|max:1000',
+                'hourly_rate'      => 'nullable|numeric|min:0',
+            ], [
+                'captchaToken.required'        => 'La verificación de seguridad es obligatoria.',
+                'email.unique'                 => 'Este correo ya está registrado.',
+                'password.regex'               => 'La contraseña debe tener al menos una mayúscula y un número.',
+                'cedula.required_if'           => 'La cédula es obligatoria para técnicos.',
+                'specialty.required_if'        => 'La especialidad es obligatoria para técnicos.',
+                'experience_years.required_if' => 'Los años de experiencia son obligatorios para técnicos.',
             ]);
+
+            // Verificar manualmente si el email ya existe (por si acaso)
+            $existingUser = User::where('email', strtolower(trim($request->email)))->first();
+            if ($existingUser) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Este correo ya está registrado.',
+                ], 422);
+            }
+
+            $user = User::create([
+                'name'             => strip_tags($request->name),
+                'email'            => strtolower(trim($request->email)),
+                'password'         => Hash::make($request->password),
+                'role'             => strip_tags($request->role),
+                'is_active'        => true,
+                'phone'            => preg_replace('/[^0-9+\-\s]/', '', $request->phone),
+                'avatar_url'       => $request->avatar_url,
+                'bio'              => strip_tags($request->bio),
+                'provincia'        => strip_tags($request->provincia),
+                'distrito'         => strip_tags($request->distrito),
+                'corregimiento'    => strip_tags($request->corregimiento),
+                'cedula'           => strip_tags($request->cedula),
+                'specialty'        => strip_tags($request->specialty),
+                'description'      => strip_tags($request->description),
+                'experience_years' => $request->experience_years,
+                'hourly_rate'      => $request->hourly_rate,
+            ]);
+
+            // Crear cuota semanal automáticamente para técnicos
+            if ($user->role === 'technician') {
+                TechnicianQuota::create([
+                    'technician_id'       => $user->id,
+                    'free_bids_per_week'  => 2,
+                    'free_bids_used'      => 0,
+                    'paid_bids_remaining' => 0,
+                    'week_reset_at'       => now()->next('Monday')->startOfDay(),
+                ]);
+            }
+
+            // Login automático tras registro — retorna token directamente
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            Log::info('Registro exitoso', [
+                'user_id' => $user->id,
+                'email'   => $user->email,
+                'role'    => $user->role,
+                'ip'      => $request->ip(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario registrado correctamente.',
+                'user'    => $user,
+                'token'   => $token,
+            ], 201);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Capturar errores de BD específicos
+            if (str_contains($e->getMessage(), 'unique') || str_contains($e->getMessage(), 'users_email_unique')) {
+                Log::warning('Registro duplicado', ['email' => $request->email, 'ip' => $request->ip()]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Este correo ya está registrado.',
+                ], 422);
+            }
+
+            Log::error('Error en registro', ['error' => $e->getMessage(), 'ip' => $request->ip()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al registrar usuario. Por favor intenta más tarde.',
+            ], 500);
+        } catch (\Exception $e) {
+            Log::error('Error general en registro', ['error' => $e->getMessage(), 'ip' => $request->ip()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al registrar usuario.',
+            ], 500);
         }
-
-        // Login automático tras registro — retorna token directamente
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        Log::info('Registro exitoso', [
-            'user_id' => $user->id,
-            'email'   => $user->email,
-            'role'    => $user->role,
-            'ip'      => $request->ip(),
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Usuario registrado correctamente.',
-            'user'    => $user,
-            'token'   => $token,
-        ], 201);
     }
 
     // =========================================================

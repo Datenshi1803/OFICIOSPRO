@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { useState } from "react"
+import { toast } from "sonner"
+import { useState, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 import { Wrench, Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft, Building, CreditCard } from "lucide-react"
@@ -14,13 +15,24 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Turnstile } from "@marsidev/react-turnstile"
+import type { TurnstileInstance } from "@marsidev/react-turnstile"
 import { registerUser } from "@/lib/api"
 import { useRouter } from "next/navigation"
+import {
+  validateNombre,
+  validateEmail,
+  validateTelefono,
+  validatePassword,
+  validateCedula,
+  filterNombre,
+  filterTelefono,
+  filterCedula,
+  isPasswordValid,
+  getPasswordRequirements,
+} from "@/lib/validations"
+import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator"
 
-// 2. Inicializar el router dentro del componente
-
-
-// Datos de ubicaciones de Panamá
 const ubicacionesPanama = {
   provincias: [
     { id: "panama", nombre: "Panamá" },
@@ -96,12 +108,8 @@ const ubicacionesPanama = {
       { id: "bella-vista", nombre: "Bella Vista" },
       { id: "marbella", nombre: "Marbella" },
     ],
-    "punta-pacifica": [
-      { id: "punta-pacifica", nombre: "Punta Pacífica" },
-    ],
-    "costa-del-este": [
-      { id: "costa-del-este", nombre: "Costa del Este" },
-    ],
+    "punta-pacifica": [{ id: "punta-pacifica", nombre: "Punta Pacífica" }],
+    "costa-del-este": [{ id: "costa-del-este", nombre: "Costa del Este" }],
     "san-miguelito": [
       { id: "san-miguelito", nombre: "San Miguelito" },
       { id: "victoria", nombre: "Victoria" },
@@ -133,11 +141,18 @@ function RegisterContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const defaultTab = searchParams.get("tipo") === "tecnico" ? "tecnico" : "cliente"
-  
+
   const [activeTab, setActiveTab] = useState(defaultTab)
   const [showPassword, setShowPassword] = useState(false)
   const [step, setStep] = useState(1)
 
+  // ── Turnstile — tokens separados por formulario ────────────────────────────
+  const [clienteCaptcha, setClienteCaptcha] = useState<string | null>(null)
+  const [tecnicoCaptcha, setTecnicoCaptcha] = useState<string | null>(null)
+  const clienteTurnstileRef = useRef<TurnstileInstance>(null)
+  const tecnicoTurnstileRef = useRef<TurnstileInstance>(null)
+
+  // ── Estado cliente ─────────────────────────────────────────────────────────
   const [clienteData, setClienteData] = useState({
     nombre: "",
     email: "",
@@ -148,21 +163,24 @@ function RegisterContent() {
     distrito: "",
     corregimiento: "",
   })
-
-  // Estados para los selects de ubicación
+  const [clienteErrors, setClienteErrors] = useState({
+    nombre: "",
+    email: "",
+    telefono: "",
+    password: "",
+  })
   const [clienteProvincia, setClienteProvincia] = useState("")
   const [clienteDistrito, setClienteDistrito] = useState("")
   const [clienteCorregimiento, setClienteCorregimiento] = useState("")
 
-  // Obtener distritos según la provincia seleccionada
-  const distritosOptions = clienteProvincia 
+  const distritosOptions = clienteProvincia
     ? ubicacionesPanama.distritos[clienteProvincia as keyof typeof ubicacionesPanama.distritos] || []
     : []
-  
   const corregimientosOptions = clienteDistrito
     ? ubicacionesPanama.corregimientos[clienteDistrito as keyof typeof ubicacionesPanama.corregimientos] || []
     : []
 
+  // ── Estado técnico ─────────────────────────────────────────────────────────
   const [tecnicoData, setTecnicoData] = useState({
     nombre: "",
     email: "",
@@ -177,95 +195,152 @@ function RegisterContent() {
     distrito: "",
     corregimiento: "",
   })
-
-  // Estados para los selects de ubicación del técnico
+  const [tecnicoErrors, setTecnicoErrors] = useState({
+    nombre: "",
+    email: "",
+    telefono: "",
+    password: "",
+    cedula: "",
+  })
   const [tecnicoProvincia, setTecnicoProvincia] = useState("")
   const [tecnicoDistrito, setTecnicoDistrito] = useState("")
   const [tecnicoCorregimiento, setTecnicoCorregimiento] = useState("")
 
-  // Obtener distritos según la provincia seleccionada para técnico
   const tecnicoDistritosOptions = tecnicoProvincia
     ? ubicacionesPanama.distritos[tecnicoProvincia as keyof typeof ubicacionesPanama.distritos] || []
     : []
-
   const tecnicoCorregimientosOptions = tecnicoDistrito
     ? ubicacionesPanama.corregimientos[tecnicoDistrito as keyof typeof ubicacionesPanama.corregimientos] || []
     : []
 
-  const handleClienteSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    try {
-      const response = await registerUser({
-        name: clienteData.nombre,
-        email: clienteData.email,
-        password: clienteData.password,
-        phone: clienteData.telefono,
-        role: 'client',
-        provincia: clienteProvincia,
-        distrito: clienteDistrito,
-        corregimiento: clienteCorregimiento,
-      })
-      
-      localStorage.setItem('token', response.token)
-      localStorage.setItem('user', JSON.stringify(response.user))
-      router.push('dashboard/cliente')
+  // ── Handlers ───────────────────────────────────────────────────────────────
 
-    } catch (error: any) {
-      console.error('Error en registro:', error)
-      alert(error.message || 'Error al registrar usuario')
-    }
+  const handleClienteSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+
+  // Validar todos los campos antes de enviar
+  const nombreValidation = validateNombre(clienteData.nombre)
+  const emailValidation = validateEmail(clienteData.email)
+  const telefonoValidation = validateTelefono(clienteData.telefono)
+  const passwordValid = isPasswordValid(clienteData.password)
+
+  if (!nombreValidation.isValid || !emailValidation.isValid || !telefonoValidation.isValid || !passwordValid) {
+    setClienteErrors({
+      nombre: nombreValidation.isValid ? "" : nombreValidation.message,
+      email: emailValidation.isValid ? "" : emailValidation.message,
+      telefono: telefonoValidation.isValid ? "" : telefonoValidation.message,
+      password: !passwordValid ? "La contraseña no cumple todos los requisitos" : "",
+    })
+    toast.error("Por favor, completa los campos requeridos correctamente")
+    return
   }
+
+  if (!clienteCaptcha) {
+    alert("Por favor completa la verificación de seguridad")
+    return
+  }
+
+  try {
+    await registerUser({
+      name: clienteData.nombre,
+      email: clienteData.email,
+      password: clienteData.password,
+      phone: clienteData.telefono,
+      role: "client",
+      provincia: clienteProvincia,
+      distrito: clienteDistrito,
+      corregimiento: clienteCorregimiento,
+      captchaToken: clienteCaptcha,
+    })
+
+    toast.success("Cuenta creada correctamente")
+
+    router.push(
+      `/login?registered=true&email=${encodeURIComponent(clienteData.email)}`
+    )
+  } catch (error: any) {
+    console.error("Error en registro:", error)
+    alert(error.message || "Error al registrar usuario")
+    clienteTurnstileRef.current?.reset()
+    setClienteCaptcha(null)
+  }
+}
 
   const handleTecnicoSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (step === 1) {
-      setStep(2)
-    } else {
-      try {
-        const response = await registerUser({
-          name: tecnicoData.nombre,
-          email: tecnicoData.email,
-          password: tecnicoData.password,
-          phone: tecnicoData.telefono,
-          role: 'technician',
-          provincia: tecnicoProvincia,
-          distrito: tecnicoDistrito,
-          corregimiento: tecnicoCorregimiento,
-          cedula: tecnicoData.cedula,
-          specialty: tecnicoData.specialty,
-          description: tecnicoData.descripcion,
-          experience_years: parseInt(tecnicoData.experiencia) || 0,
-        })
-        
-        localStorage.setItem('token', response.token)
-        localStorage.setItem('user', JSON.stringify(response.user))
-        router.push('dashboard/tecnico')
+  e.preventDefault()
 
-      } catch (error: any) {
-        console.error('Error en registro:', error)
-        alert(error.message || 'Error al registrar usuario')
-      }
-    }
+  // Validar campos del paso 1
+  const nombreValidation = validateNombre(tecnicoData.nombre)
+  const emailValidation = validateEmail(tecnicoData.email)
+  const telefonoValidation = validateTelefono(tecnicoData.telefono)
+  const passwordValid = isPasswordValid(tecnicoData.password)
+  const cedulaValidation = validateCedula(tecnicoData.cedula)
+
+  if (!nombreValidation.isValid || !emailValidation.isValid || !telefonoValidation.isValid || !passwordValid || !cedulaValidation.isValid) {
+    setTecnicoErrors({
+      nombre: nombreValidation.isValid ? "" : nombreValidation.message,
+      email: emailValidation.isValid ? "" : emailValidation.message,
+      telefono: telefonoValidation.isValid ? "" : telefonoValidation.message,
+      password: !passwordValid ? "La contraseña no cumple todos los requisitos" : "",
+      cedula: cedulaValidation.isValid ? "" : cedulaValidation.message,
+    })
+    toast.error("Por favor, completa los campos requeridos correctamente")
+    return
   }
 
+  if (step === 1) {
+    setStep(2)
+    setTecnicoCaptcha(null)
+    return
+  }
+
+  if (!tecnicoCaptcha) {
+    alert("Por favor completa la verificación de seguridad")
+    return
+  }
+
+  try {
+    await registerUser({
+      name: tecnicoData.nombre,
+      email: tecnicoData.email,
+      password: tecnicoData.password,
+      phone: tecnicoData.telefono,
+      role: "technician",
+      provincia: tecnicoProvincia,
+      distrito: tecnicoDistrito,
+      corregimiento: tecnicoCorregimiento,
+      cedula: tecnicoData.cedula,
+      specialty: tecnicoData.specialty,
+      description: tecnicoData.descripcion,
+      experience_years: parseInt(tecnicoData.experiencia) || 0,
+      captchaToken: tecnicoCaptcha,
+    })
+
+    toast.success("Cuenta creada correctamente")
+
+    router.push(
+      `/login?registered=true&email=${encodeURIComponent(tecnicoData.email)}`
+    )
+  } catch (error: any) {
+    console.error("Error en registro:", error)
+    alert(error.message || "Error al registrar usuario")
+    tecnicoTurnstileRef.current?.reset()
+    setTecnicoCaptcha(null)
+  }
+}
+
+  // ── Pantalla de éxito ──────────────────────────────────────────────────────
+  
+
   return (
-     <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background">
 
       {/* LEFT PANEL — Branding (oculto en mobile) */}
       <div className="relative hidden w-1/2 bg-sidebar lg:block">
-       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.2),transparent_50%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.2),transparent_50%)] pointer-events-none" />
         <div className="flex h-full flex-col justify-between p-12">
- 
-          {/* Logo modo oscuro */}
           <Link href="/" className="flex items-center gap-0" aria-label="Volver al inicio de OficiosPro">
-            <Image
-              src="/engranaje.svg"
-              alt="Logo OficiosPro"
-              width={36}
-              height={36}
-              className="-mr-1"
-            />
+            <Image src="/engranaje.svg" alt="Logo OficiosPro" width={36} height={36} className="-mr-1" />
             <span className="text-2xl font-black tracking-tight text-white">
               ficios<span className="text-blue-400">Pro</span>
             </span>
@@ -273,26 +348,22 @@ function RegisterContent() {
 
           <div className="space-y-6">
             <h1 className="text-4xl font-bold leading-tight text-sidebar-foreground">
-              {activeTab === "cliente" 
+              {activeTab === "cliente"
                 ? "Encuentra al técnico perfecto para tu hogar"
-                : "Únete a nuestra red de profesionales"
-              }
+                : "Únete a nuestra red de profesionales"}
             </h1>
             <p className="text-lg text-sidebar-foreground/70">
               {activeTab === "cliente"
                 ? "Publica tu trabajo, recibe cotizaciones y elige la mejor opción. Sin complicaciones."
-                : "Accede a más clientes, construye tu reputación digital y aumenta tus ingresos."
-              }
+                : "Accede a más clientes, construye tu reputación digital y aumenta tus ingresos."}
             </p>
           </div>
 
-          <p className="text-sm text-sidebar-foreground/50">
-            &copy; 2025 OficiosPro. Panamá.
-          </p>
+          <p className="text-sm text-sidebar-foreground/50">&copy; 2025 OficiosPro. Panamá.</p>
         </div>
       </div>
 
-      {/* Right Panel - Registration Form */}
+      {/* RIGHT PANEL — Formulario */}
       <div className="flex w-full flex-col lg:w-1/2">
         {/* Mobile Header */}
         <div className="flex items-center justify-between border-b border-border p-4 lg:hidden">
@@ -312,12 +383,18 @@ function RegisterContent() {
           <Card className="w-full max-w-lg border-0 shadow-none lg:border lg:shadow-sm">
             <CardHeader className="space-y-1 text-center">
               <CardTitle className="text-2xl font-bold">Crear Cuenta</CardTitle>
-              <CardDescription>
-                Selecciona el tipo de cuenta que deseas crear
-              </CardDescription>
+              <CardDescription>Selecciona el tipo de cuenta que deseas crear</CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setStep(1); }}>
+              <Tabs
+                value={activeTab}
+                onValueChange={(v) => {
+                  setActiveTab(v)
+                  setStep(1)
+                  setClienteCaptcha(null)
+                  setTecnicoCaptcha(null)
+                }}
+              >
                 <TabsList className="mb-6 grid w-full grid-cols-2">
                   <TabsTrigger value="cliente" className="gap-2">
                     <User className="h-4 w-4" />
@@ -329,7 +406,7 @@ function RegisterContent() {
                   </TabsTrigger>
                 </TabsList>
 
-                {/* Cliente Form */}
+                {/* ── Cliente Form ─────────────────────────────────────────── */}
                 <TabsContent value="cliente">
                   <form onSubmit={handleClienteSubmit} className="space-y-4">
                     <div className="space-y-2">
@@ -339,13 +416,23 @@ function RegisterContent() {
                         <Input
                           id="cliente-nombre"
                           placeholder="Tu nombre completo"
-                          className="pl-10"
+                          className={`pl-10 ${clienteErrors.nombre ? "border-red-500" : ""}`}
                           autoComplete="name"
                           value={clienteData.nombre}
-                          onChange={(e) => setClienteData({ ...clienteData, nombre: e.target.value })}
+                          onChange={(e) => {
+                            const filtered = filterNombre(e.target.value)
+                            setClienteData({ ...clienteData, nombre: filtered })
+                            if (filtered.trim()) {
+                              const validation = validateNombre(filtered)
+                              setClienteErrors({ ...clienteErrors, nombre: validation.isValid ? "" : validation.message })
+                            } else {
+                              setClienteErrors({ ...clienteErrors, nombre: "" })
+                            }
+                          }}
                           required
                         />
                       </div>
+                      {clienteErrors.nombre && <p className="text-xs text-red-500">{clienteErrors.nombre}</p>}
                     </div>
 
                     <div className="space-y-2">
@@ -356,13 +443,22 @@ function RegisterContent() {
                           id="cliente-email"
                           type="email"
                           placeholder="tu@correo.com"
-                          className="pl-10"
+                          className={`pl-10 ${clienteErrors.email ? "border-red-500" : ""}`}
                           autoComplete="email"
                           value={clienteData.email}
-                          onChange={(e) => setClienteData({ ...clienteData, email: e.target.value })}
+                          onChange={(e) => {
+                            setClienteData({ ...clienteData, email: e.target.value })
+                            if (e.target.value.trim()) {
+                              const validation = validateEmail(e.target.value)
+                              setClienteErrors({ ...clienteErrors, email: validation.isValid ? "" : validation.message })
+                            } else {
+                              setClienteErrors({ ...clienteErrors, email: "" })
+                            }
+                          }}
                           required
                         />
                       </div>
+                      {clienteErrors.email && <p className="text-xs text-red-500">{clienteErrors.email}</p>}
                     </div>
 
                     <div className="space-y-2">
@@ -372,26 +468,43 @@ function RegisterContent() {
                         <Input
                           id="cliente-telefono"
                           type="tel"
-                          placeholder="+507 6000-0000"
-                          className="pl-10"
+                          placeholder="6000-0000"
+                          className={`pl-10 ${clienteErrors.telefono ? "border-red-500" : ""}`}
                           autoComplete="tel"
                           value={clienteData.telefono}
-                          onChange={(e) => setClienteData({ ...clienteData, telefono: e.target.value })}
+                          onChange={(e) => {
+                            const filtered = filterTelefono(e.target.value)
+                            setClienteData({ ...clienteData, telefono: filtered })
+                            if (filtered.trim()) {
+                              const validation = validateTelefono(filtered)
+                              setClienteErrors({ ...clienteErrors, telefono: validation.isValid ? "" : validation.message })
+                            } else {
+                              setClienteErrors({ ...clienteErrors, telefono: "" })
+                            }
+                          }}
                           required
                         />
                       </div>
+                      {clienteErrors.telefono && <p className="text-xs text-red-500">{clienteErrors.telefono}</p>}
                     </div>
 
-                    {/* Campos de ubicación - Cliente */}
                     <div className="space-y-2">
                       <Label htmlFor="cliente-provincia">Provincia</Label>
-                      <Select value={clienteProvincia} onValueChange={(v) => { setClienteProvincia(v); setClienteDistrito(""); setClienteCorregimiento(""); setClienteData({ ...clienteData, provincia: v, distrito: "", corregimiento: "" }) }}>
+                      <Select
+                        value={clienteProvincia}
+                        onValueChange={(v) => {
+                          setClienteProvincia(v)
+                          setClienteDistrito("")
+                          setClienteCorregimiento("")
+                          setClienteData({ ...clienteData, provincia: v, distrito: "", corregimiento: "" })
+                        }}
+                      >
                         <SelectTrigger id="cliente-provincia">
                           <SelectValue placeholder="Selecciona tu provincia" />
                         </SelectTrigger>
                         <SelectContent>
-                          {ubicacionesPanama.provincias.map((provincia) => (
-                            <SelectItem key={provincia.id} value={provincia.id}>{provincia.nombre}</SelectItem>
+                          {ubicacionesPanama.provincias.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -399,13 +512,21 @@ function RegisterContent() {
 
                     <div className="space-y-2">
                       <Label htmlFor="cliente-distrito">Distrito</Label>
-                      <Select value={clienteDistrito} onValueChange={(v) => { setClienteDistrito(v); setClienteCorregimiento(""); setClienteData({ ...clienteData, distrito: v, corregimiento: "" }) }} disabled={!clienteProvincia}>
+                      <Select
+                        value={clienteDistrito}
+                        onValueChange={(v) => {
+                          setClienteDistrito(v)
+                          setClienteCorregimiento("")
+                          setClienteData({ ...clienteData, distrito: v, corregimiento: "" })
+                        }}
+                        disabled={!clienteProvincia}
+                      >
                         <SelectTrigger id="cliente-distrito">
                           <SelectValue placeholder="Selecciona tu distrito" />
                         </SelectTrigger>
                         <SelectContent>
-                          {distritosOptions.map((distrito: any) => (
-                            <SelectItem key={distrito.id} value={distrito.id}>{distrito.nombre}</SelectItem>
+                          {distritosOptions.map((d: any) => (
+                            <SelectItem key={d.id} value={d.id}>{d.nombre}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -413,13 +534,20 @@ function RegisterContent() {
 
                     <div className="space-y-2">
                       <Label htmlFor="cliente-corregimiento">Corregimiento</Label>
-                      <Select value={clienteCorregimiento} onValueChange={(v) => { setClienteCorregimiento(v); setClienteData({ ...clienteData, corregimiento: v }) }} disabled={!clienteDistrito}>
+                      <Select
+                        value={clienteCorregimiento}
+                        onValueChange={(v) => {
+                          setClienteCorregimiento(v)
+                          setClienteData({ ...clienteData, corregimiento: v })
+                        }}
+                        disabled={!clienteDistrito}
+                      >
                         <SelectTrigger id="cliente-corregimiento">
                           <SelectValue placeholder="Selecciona tu corregimiento" />
                         </SelectTrigger>
                         <SelectContent>
-                          {corregimientosOptions.map((corregimiento: any) => (
-                            <SelectItem key={corregimiento.id} value={corregimiento.id}>{corregimiento.nombre}</SelectItem>
+                          {corregimientosOptions.map((c: any) => (
+                            <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -433,10 +561,15 @@ function RegisterContent() {
                           id="cliente-password"
                           type={showPassword ? "text" : "password"}
                           placeholder="Mínimo 8 caracteres"
-                          className="pl-10 pr-10"
+                          className={`pl-10 pr-10 ${clienteErrors.password ? "border-red-500" : ""}`}
                           autoComplete="new-password"
                           value={clienteData.password}
-                          onChange={(e) => setClienteData({ ...clienteData, password: e.target.value })}
+                          onChange={(e) => {
+                            setClienteData({ ...clienteData, password: e.target.value })
+                            if (!e.target.value.trim()) {
+                              setClienteErrors({ ...clienteErrors, password: "" })
+                            }
+                          }}
                           required
                           minLength={8}
                         />
@@ -448,9 +581,12 @@ function RegisterContent() {
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Mínimo 8 caracteres, una mayúscula y un número
-                      </p>
+                      {clienteData.password ? (
+                        <PasswordStrengthIndicator password={clienteData.password} showDetails={true} />
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Ingresa una contraseña fuerte</p>
+                      )}
+                      {clienteErrors.password && <p className="text-xs text-red-500 font-medium">{clienteErrors.password}</p>}
                     </div>
 
                     <div className="flex items-start gap-2">
@@ -468,7 +604,15 @@ function RegisterContent() {
                       </Label>
                     </div>
 
-                    <Button type="submit" className="w-full">
+                    <Turnstile
+                      ref={clienteTurnstileRef}
+                      siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                      onSuccess={setClienteCaptcha}
+                      onError={() => setClienteCaptcha(null)}
+                      onExpire={() => setClienteCaptcha(null)}
+                    />
+
+                    <Button type="submit" className="w-full" disabled={!clienteCaptcha}>
                       Crear Cuenta de Cliente
                     </Button>
 
@@ -491,7 +635,7 @@ function RegisterContent() {
                   </form>
                 </TabsContent>
 
-                {/* Técnico Form */}
+                {/* ── Técnico Form ─────────────────────────────────────────── */}
                 <TabsContent value="tecnico">
                   <form onSubmit={handleTecnicoSubmit} className="space-y-4">
                     {step === 1 ? (
@@ -509,13 +653,23 @@ function RegisterContent() {
                             <Input
                               id="tecnico-nombre"
                               placeholder="Tu nombre completo"
-                              className="pl-10"
+                              className={`pl-10 ${tecnicoErrors.nombre ? "border-red-500" : ""}`}
                               autoComplete="name"
                               value={tecnicoData.nombre}
-                              onChange={(e) => setTecnicoData({ ...tecnicoData, nombre: e.target.value })}
+                              onChange={(e) => {
+                                const filtered = filterNombre(e.target.value)
+                                setTecnicoData({ ...tecnicoData, nombre: filtered })
+                                if (filtered.trim()) {
+                                  const validation = validateNombre(filtered)
+                                  setTecnicoErrors({ ...tecnicoErrors, nombre: validation.isValid ? "" : validation.message })
+                                } else {
+                                  setTecnicoErrors({ ...tecnicoErrors, nombre: "" })
+                                }
+                              }}
                               required
                             />
                           </div>
+                          {tecnicoErrors.nombre && <p className="text-xs text-red-500">{tecnicoErrors.nombre}</p>}
                         </div>
 
                         <div className="space-y-2">
@@ -526,13 +680,22 @@ function RegisterContent() {
                               id="tecnico-email"
                               type="email"
                               placeholder="tu@correo.com"
-                              className="pl-10"
+                              className={`pl-10 ${tecnicoErrors.email ? "border-red-500" : ""}`}
                               autoComplete="email"
                               value={tecnicoData.email}
-                              onChange={(e) => setTecnicoData({ ...tecnicoData, email: e.target.value })}
+                              onChange={(e) => {
+                                setTecnicoData({ ...tecnicoData, email: e.target.value })
+                                if (e.target.value.trim()) {
+                                  const validation = validateEmail(e.target.value)
+                                  setTecnicoErrors({ ...tecnicoErrors, email: validation.isValid ? "" : validation.message })
+                                } else {
+                                  setTecnicoErrors({ ...tecnicoErrors, email: "" })
+                                }
+                              }}
                               required
                             />
                           </div>
+                          {tecnicoErrors.email && <p className="text-xs text-red-500">{tecnicoErrors.email}</p>}
                         </div>
 
                         <div className="space-y-2">
@@ -542,14 +705,24 @@ function RegisterContent() {
                             <Input
                               id="tecnico-telefono"
                               type="tel"
-                              placeholder="+507 6000-0000"
-                              className="pl-10"
+                              placeholder="6000-0000"
+                              className={`pl-10 ${tecnicoErrors.telefono ? "border-red-500" : ""}`}
                               autoComplete="tel"
                               value={tecnicoData.telefono}
-                              onChange={(e) => setTecnicoData({ ...tecnicoData, telefono: e.target.value })}
+                              onChange={(e) => {
+                                const filtered = filterTelefono(e.target.value)
+                                setTecnicoData({ ...tecnicoData, telefono: filtered })
+                                if (filtered.trim()) {
+                                  const validation = validateTelefono(filtered)
+                                  setTecnicoErrors({ ...tecnicoErrors, telefono: validation.isValid ? "" : validation.message })
+                                } else {
+                                  setTecnicoErrors({ ...tecnicoErrors, telefono: "" })
+                                }
+                              }}
                               required
                             />
                           </div>
+                          {tecnicoErrors.telefono && <p className="text-xs text-red-500">{tecnicoErrors.telefono}</p>}
                         </div>
 
                         <div className="space-y-2">
@@ -559,16 +732,27 @@ function RegisterContent() {
                             <Input
                               id="tecnico-cedula"
                               placeholder="8-888-8888"
-                              className="pl-10"
+                              className={`pl-10 ${tecnicoErrors.cedula ? "border-red-500" : ""}`}
                               autoComplete="off"
                               value={tecnicoData.cedula}
-                              onChange={(e) => setTecnicoData({ ...tecnicoData, cedula: e.target.value })}
+                              onChange={(e) => {
+                                const filtered = filterCedula(e.target.value)
+                                setTecnicoData({ ...tecnicoData, cedula: filtered })
+                                if (filtered.trim()) {
+                                  const validation = validateCedula(filtered)
+                                  setTecnicoErrors({ ...tecnicoErrors, cedula: validation.isValid ? "" : validation.message })
+                                } else {
+                                  setTecnicoErrors({ ...tecnicoErrors, cedula: "" })
+                                }
+                              }}
                               required
                             />
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            Requerida para verificación de identidad
-                          </p>
+                          {tecnicoErrors.cedula ? (
+                            <p className="text-xs text-red-500">{tecnicoErrors.cedula}</p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Requerida para verificación de identidad</p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -579,10 +763,15 @@ function RegisterContent() {
                               id="tecnico-password"
                               type={showPassword ? "text" : "password"}
                               placeholder="Mínimo 8 caracteres"
-                              className="pl-10 pr-10"
+                              className={`pl-10 pr-10 ${tecnicoErrors.password ? "border-red-500" : ""}`}
                               autoComplete="new-password"
                               value={tecnicoData.password}
-                              onChange={(e) => setTecnicoData({ ...tecnicoData, password: e.target.value })}
+                              onChange={(e) => {
+                                setTecnicoData({ ...tecnicoData, password: e.target.value })
+                                if (!e.target.value.trim()) {
+                                  setTecnicoErrors({ ...tecnicoErrors, password: "" })
+                                }
+                              }}
                               required
                               minLength={8}
                             />
@@ -594,6 +783,12 @@ function RegisterContent() {
                               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                           </div>
+                          {tecnicoData.password ? (
+                            <PasswordStrengthIndicator password={tecnicoData.password} showDetails={true} />
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Ingresa una contraseña fuerte</p>
+                          )}
+                          {tecnicoErrors.password && <p className="text-xs text-red-500 font-medium">{tecnicoErrors.password}</p>}
                         </div>
 
                         <Button type="submit" className="w-full">
@@ -608,16 +803,23 @@ function RegisterContent() {
                           </p>
                         </div>
 
-                        {/* Campos de ubicación - Técnico */}
                         <div className="space-y-2">
                           <Label htmlFor="tecnico-provincia">Provincia</Label>
-                          <Select value={tecnicoProvincia} onValueChange={(v) => { setTecnicoProvincia(v); setTecnicoDistrito(""); setTecnicoCorregimiento(""); setTecnicoData({ ...tecnicoData, provincia: v, distrito: "", corregimiento: "" }) }}>
+                          <Select
+                            value={tecnicoProvincia}
+                            onValueChange={(v) => {
+                              setTecnicoProvincia(v)
+                              setTecnicoDistrito("")
+                              setTecnicoCorregimiento("")
+                              setTecnicoData({ ...tecnicoData, provincia: v, distrito: "", corregimiento: "" })
+                            }}
+                          >
                             <SelectTrigger id="tecnico-provincia">
                               <SelectValue placeholder="Selecciona tu provincia" />
                             </SelectTrigger>
                             <SelectContent>
-                              {ubicacionesPanama.provincias.map((provincia) => (
-                                <SelectItem key={provincia.id} value={provincia.id}>{provincia.nombre}</SelectItem>
+                              {ubicacionesPanama.provincias.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -625,13 +827,21 @@ function RegisterContent() {
 
                         <div className="space-y-2">
                           <Label htmlFor="tecnico-distrito">Distrito</Label>
-                          <Select value={tecnicoDistrito} onValueChange={(v) => { setTecnicoDistrito(v); setTecnicoCorregimiento(""); setTecnicoData({ ...tecnicoData, distrito: v, corregimiento: "" }) }} disabled={!tecnicoProvincia}>
+                          <Select
+                            value={tecnicoDistrito}
+                            onValueChange={(v) => {
+                              setTecnicoDistrito(v)
+                              setTecnicoCorregimiento("")
+                              setTecnicoData({ ...tecnicoData, distrito: v, corregimiento: "" })
+                            }}
+                            disabled={!tecnicoProvincia}
+                          >
                             <SelectTrigger id="tecnico-distrito">
                               <SelectValue placeholder="Selecciona tu distrito" />
                             </SelectTrigger>
                             <SelectContent>
-                              {tecnicoDistritosOptions.map((distrito: any) => (
-                                <SelectItem key={distrito.id} value={distrito.id}>{distrito.nombre}</SelectItem>
+                              {tecnicoDistritosOptions.map((d: any) => (
+                                <SelectItem key={d.id} value={d.id}>{d.nombre}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -639,13 +849,20 @@ function RegisterContent() {
 
                         <div className="space-y-2">
                           <Label htmlFor="tecnico-corregimiento">Corregimiento</Label>
-                          <Select value={tecnicoCorregimiento} onValueChange={(v) => { setTecnicoCorregimiento(v); setTecnicoData({ ...tecnicoData, corregimiento: v }) }} disabled={!tecnicoDistrito}>
+                          <Select
+                            value={tecnicoCorregimiento}
+                            onValueChange={(v) => {
+                              setTecnicoCorregimiento(v)
+                              setTecnicoData({ ...tecnicoData, corregimiento: v })
+                            }}
+                            disabled={!tecnicoDistrito}
+                          >
                             <SelectTrigger id="tecnico-corregimiento">
                               <SelectValue placeholder="Selecciona tu corregimiento" />
                             </SelectTrigger>
                             <SelectContent>
-                              {tecnicoCorregimientosOptions.map((corregimiento: any) => (
-                                <SelectItem key={corregimiento.id} value={corregimiento.id}>{corregimiento.nombre}</SelectItem>
+                              {tecnicoCorregimientosOptions.map((c: any) => (
+                                <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -653,7 +870,10 @@ function RegisterContent() {
 
                         <div className="space-y-2">
                           <Label htmlFor="tecnico-experiencia">Años de experiencia</Label>
-                          <Select value={tecnicoData.experiencia} onValueChange={(v) => setTecnicoData({ ...tecnicoData, experiencia: v })}>
+                          <Select
+                            value={tecnicoData.experiencia}
+                            onValueChange={(v) => setTecnicoData({ ...tecnicoData, experiencia: v })}
+                          >
                             <SelectTrigger id="tecnico-experiencia">
                               <SelectValue placeholder="Selecciona" />
                             </SelectTrigger>
@@ -669,23 +889,15 @@ function RegisterContent() {
 
                         <div className="space-y-2">
                           <Label htmlFor="tecnico-specialty">Especialidad principal</Label>
-                          <Select value={tecnicoData.specialty || ""} onValueChange={(v) => setTecnicoData({ ...tecnicoData, specialty: v })}>
+                          <Select
+                            value={tecnicoData.specialty || ""}
+                            onValueChange={(v) => setTecnicoData({ ...tecnicoData, specialty: v })}
+                          >
                             <SelectTrigger id="tecnico-specialty">
                               <SelectValue placeholder="Selecciona tu especialidad" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Refrigeracion">Refrigeracion</SelectItem>
-                              {/* <SelectItem value="plomero">Plomero</SelectItem>
-                              <SelectItem value="aire-acondicionado">Aire Acondicionado</SelectItem>
-                              <SelectItem value="carpintero">Carpintero</SelectItem>
-                              <SelectItem value="pintor">Pintor</SelectItem>
-                              <SelectItem value="albañil">Albañil</SelectItem>
-                              <SelectItem value="soldador">Soldador</SelectItem>
-                              <SelectItem value="mecanico">Mecánico</SelectItem>
-                              <SelectItem value="cerrajero">Cerrajero</SelectItem>
-                              <SelectItem value="jardinero">Jardinero</SelectItem>
-                              <SelectItem value="limpieza">Limpieza Industrial</SelectItem>
-                              <SelectItem value="otro">Otro</SelectItem> */}
+                              <SelectItem value="Refrigeracion">Refrigeración</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -700,9 +912,7 @@ function RegisterContent() {
                             onChange={(e) => setTecnicoData({ ...tecnicoData, descripcion: e.target.value })}
                             maxLength={500}
                           />
-                          <p className="text-xs text-muted-foreground">
-                            {tecnicoData.descripcion.length}/500 caracteres
-                          </p>
+                          <p className="text-xs text-muted-foreground">{tecnicoData.descripcion.length}/500 caracteres</p>
                         </div>
 
                         <div className="flex items-start gap-2">
@@ -721,11 +931,27 @@ function RegisterContent() {
                           </Label>
                         </div>
 
+                        <Turnstile
+                          ref={tecnicoTurnstileRef}
+                          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                          onSuccess={setTecnicoCaptcha}
+                          onError={() => setTecnicoCaptcha(null)}
+                          onExpire={() => setTecnicoCaptcha(null)}
+                        />
+
                         <div className="flex gap-3">
-                          <Button type="button" variant="outline" className="flex-1" onClick={() => setStep(1)}>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => {
+                              setStep(1)
+                              setTecnicoCaptcha(null)
+                            }}
+                          >
                             Atrás
                           </Button>
-                          <Button type="submit" className="flex-1">
+                          <Button type="submit" className="flex-1" disabled={!tecnicoCaptcha}>
                             Crear Cuenta
                           </Button>
                         </div>
