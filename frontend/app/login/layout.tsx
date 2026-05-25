@@ -10,15 +10,25 @@ export const metadata: Metadata = {
     "login cliente Panamá",
     "plataforma servicios Panamá",
   ],
+  // ✅ Agrega esto — le dice a Google que no indexe esta página
+  robots: {
+    index: false,
+    follow: false,
+  },
   openGraph: {
-    title: "Iniciar sesion | OficiosPro Panamá",
+    title: "Iniciar sesión | OficiosPro Panamá",
     description: "Accede a tu cuenta en OficiosPro y gestiona tus servicios de aire acondicionado en Panamá.",
+    url: "https://oficios-pro.com/login",
+    siteName: "OficiosPro",
     locale: "es_PA",
     type: "website",
   },
+  alternates: {
+    canonical: "https://oficios-pro.com/login",
+  },
 }
 
-export default function LoginLayout ({
+export default function LoginLayout({
   children,
 }: {
   children: React.ReactNode

@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
@@ -249,16 +250,25 @@ function RegisterContent() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Left Panel - Branding (hidden on mobile) */}
+     <div className="flex min-h-screen bg-background">
+
+      {/* LEFT PANEL — Branding (oculto en mobile) */}
       <div className="relative hidden w-1/2 bg-sidebar lg:block">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(59,130,246,0.2),transparent_50%)]" />
+       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.2),transparent_50%)] pointer-events-none" />
         <div className="flex h-full flex-col justify-between p-12">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
-              <Wrench className="h-6 w-6 text-sidebar-primary-foreground" />
-            </div>
-            <span className="text-2xl font-bold text-sidebar-foreground">OficiosPro</span>
+ 
+          {/* Logo modo oscuro */}
+          <Link href="/" className="flex items-center gap-0" aria-label="Volver al inicio de OficiosPro">
+            <Image
+              src="/engranaje.svg"
+              alt="Logo OficiosPro"
+              width={36}
+              height={36}
+              className="-mr-1"
+            />
+            <span className="text-2xl font-black tracking-tight text-white">
+              ficios<span className="text-blue-400">Pro</span>
+            </span>
           </Link>
 
           <div className="space-y-6">

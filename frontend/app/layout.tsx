@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Providers } from '@/components/providers'
 import Script from 'next/script'
 import './globals.css'
+import CookieBanner from "@/components/CookieBanner"
 
 const _geist = Geist({ subsets: ['latin'] })
 const _geistMono = Geist_Mono({ subsets: ['latin'] })
@@ -24,6 +25,7 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <Providers>
           {children}
+          <CookieBanner />
         </Providers>
 
         {process.env.NODE_ENV === 'production' && (
