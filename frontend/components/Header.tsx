@@ -64,17 +64,12 @@ export default function Header() {
         <div className="grid grid-cols-3 items-center">
 
           {/* LOGO */}
-            <Link href="/" className="flex items-center gap-0 justify-self-start">
-            <Image 
-                src="/engranaje.svg" 
-                alt="Logo OficiosPro" 
-                width={28} 
-                height={28}
-                className="-mr-1"  
-            />
-            <span className="text-2xl font-black tracking-tight text-slate-900">
-                ficios<span className="text-blue-500">Pro</span>
-            </span>
+            <Link href="/" className="flex items-center group justify-self-start">
+              <img
+                src="/Logo3.svg"
+                alt="OficiosPro"
+                className="h-16 w-auto object-contain"
+              />
             </Link>
 
           {/* NAV DESKTOP */}

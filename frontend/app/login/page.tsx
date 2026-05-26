@@ -4,9 +4,23 @@ import { Suspense, useState,useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Eye, EyeOff, Mail, Lock, ArrowLeft, Loader2 } from "lucide-react"
+
+import { Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  ArrowLeft,
+  Loader2,
+  CheckCircle,
+  ShieldCheck,
+  Star,
+  Users, } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
@@ -307,83 +321,101 @@ useEffect(() => {
   )
 }
 
-// ─── PAGE ─────────────────────────────────────────────────────────────────────
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen bg-background">
+    <main className="relative min-h-screen overflow-hidden bg-[#f6fbff]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.20),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(37,99,235,0.16),transparent_35%)]" />
 
-      {/* LEFT PANEL — Branding (oculto en mobile) */}
-      <div className="relative hidden w-1/2 bg-sidebar lg:block">
-       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.2),transparent_50%)] pointer-events-none" />
-        <div className="flex h-full flex-col justify-between p-12">
- 
-          {/* Logo modo oscuro */}
-          <Link href="/" className="flex items-center gap-0" aria-label="Volver al inicio de OficiosPro">
-            <Image
-              src="/engranaje.svg"
-              alt="Logo OficiosPro"
-              width={36}
-              height={36}
-              className="-mr-1"
+      <div className="relative grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="relative hidden overflow-hidden bg-slate-950 px-12 py-10 text-white lg:flex lg:flex-col lg:justify-between">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,0.22),transparent_30%),radial-gradient(circle_at_80%_80%,rgba(59,130,246,0.20),transparent_35%)]" />
+          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.18)_1px,transparent_1px)] bg-[length:26px_26px]" />
+
+          <Link href="/" className="relative z-10 flex items-center">
+            <img
+              src="/Logo4.svg"
+              alt="OficiosPro"
+              className="h-16 w-auto object-contain"
             />
-            <span className="text-2xl font-black tracking-tight text-white">
-              ficios<span className="text-blue-400">Pro</span>
-            </span>
           </Link>
 
-          <div className="space-y-6">
-            <h1 className="text-4xl font-bold leading-tight text-sidebar-foreground">
-              Encuentra técnicos confiables para tu hogar
+          <div className="relative z-10 max-w-xl">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white/90 backdrop-blur">
+              <Star className="h-4 w-4 text-yellow-300" />
+              +500 técnicos verificados
+            </div>
+
+            <h1 className="text-5xl font-black leading-tight tracking-tight">
+              Servicios técnicos{" "}
+              <span className="bg-gradient-to-r from-sky-300 to-cyan-200 bg-clip-text text-transparent">
+                confiables
+              </span>{" "}
+              para tu hogar
             </h1>
-            <p className="text-lg text-sidebar-foreground/70">
-              Más de 500 técnicos verificados listos para ayudarte con el mantenimiento
-              y reparación de tu aire acondicionado.
+
+            <p className="mt-6 max-w-md text-lg leading-relaxed text-slate-300">
+              Encuentra profesionales verificados para mantenimiento,
+              reparación e instalación de servicios en casa.
             </p>
+
+            <div className="mt-10 grid max-w-lg grid-cols-3 gap-4">
+              <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
+                <ShieldCheck className="mb-3 h-6 w-6 text-emerald-300" />
+                <p className="text-sm font-semibold">Seguro</p>
+                <p className="mt-1 text-xs text-slate-400">Servicios verificados</p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
+                <Users className="mb-3 h-6 w-6 text-sky-300" />
+                <p className="text-sm font-semibold">Expertos</p>
+                <p className="mt-1 text-xs text-slate-400">Técnicos certificados</p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
+                <CheckCircle className="mb-3 h-6 w-6 text-cyan-300" />
+                <p className="text-sm font-semibold">Rápido</p>
+                <p className="mt-1 text-xs text-slate-400">Atención eficiente</p>
+              </div>
+            </div>
           </div>
 
-          <p className="text-sm text-sidebar-foreground/50">
-            &copy; 2026 OficiosPro. Panamá.
-          </p>
-        </div>
-      </div>
-
-      {/* RIGHT PANEL — Formulario */}
-      <div className="flex w-full flex-col lg:w-1/2">
-
-        {/* Mobile Header */}
-        <div className="flex items-center justify-between border-b border-border p-4 lg:hidden">
-          <Link href="/" className="flex items-center gap-0" aria-label="Volver al inicio de OficiosPro">
-            <Image
-              src="/engranaje.svg"
-              alt="Logo OficiosPro"
-              width={28}
-              height={28}
-              className="-mr-1"
-            />
-            <span className="text-xl font-black tracking-tight text-foreground">
-              Oficios<span className="text-blue-500">Pro</span>
-            </span>
-          </Link>
-          <Link
-            href="/"
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Volver
-          </Link>
-        </div>
-
-        {/* Suspense requerido por useSearchParams */}
-        <Suspense
-          fallback={
-            <div className="flex flex-1 items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="relative z-10 flex items-center justify-between text-sm text-slate-500">
+            <p>© 2026 OficiosPro</p>
+            <div className="flex gap-5">
+              <Link href="#">Términos</Link>
+              <Link href="#">Privacidad</Link>
+              <Link href="#">Ayuda</Link>
             </div>
-          }
-        >
-          <LoginForm />
-        </Suspense>
+          </div>
+        </section>
+
+        <section className="relative flex flex-col">
+          <div className="flex items-center justify-between border-b border-slate-200/70 bg-white/70 p-4 backdrop-blur lg:hidden">
+            <Link href="/" className="flex items-center">
+              <img
+                src="/Logo3.png"
+                alt="OficiosPro"
+                className="h-14 w-auto object-contain"
+              />
+            </Link>
+
+            <Link href="/" className="flex items-center gap-1 text-sm text-slate-500">
+              <ArrowLeft className="h-4 w-4" />
+              Volver
+            </Link>
+          </div>
+
+          <Suspense
+            fallback={
+              <div className="flex flex-1 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+              </div>
+            }
+          >
+            <LoginForm />
+          </Suspense>
+        </section>
       </div>
-    </div>
+    </main>
   )
 }

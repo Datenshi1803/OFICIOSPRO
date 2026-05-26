@@ -475,13 +475,12 @@ export default function LandingPage() {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-12 mb-14">
             <div className="sm:col-span-2 md:col-span-1">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg">
-                  <Wrench className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-2xl font-black tracking-tight text-white">
-                  Oficios<span className="text-cyan-300">Pro</span>
-                </span>
+               <div className="mb-6">
+                <img
+                  src="/Logo4.svg"
+                  alt="OficiosPro"
+                  className="h-16 w-auto object-contain"
+                />
               </div>
               <p className="text-slate-400 leading-relaxed mb-6">
                 Plataforma líder en Panamá para conectar clientes con técnicos de aire acondicionado verificados.
