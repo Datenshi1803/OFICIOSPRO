@@ -15,6 +15,8 @@ export interface RegisterData {
   specialty?: string;
   description?: string;
   experience_years?: number;
+  // Seguridad
+  captchaToken: string;
 }
 
 export interface LoginData {
@@ -23,10 +25,10 @@ export interface LoginData {
 }
 
 export interface AuthResponse {
-  success: boolean; // ← agregar, el backend lo retorna
+  success: boolean;
   message: string;
   user: any;
-  token: string;   // ← quitar el ?
+  token: string;
 }
 
 export async function registerUser(data: RegisterData): Promise<AuthResponse> {
@@ -269,7 +271,7 @@ export interface JobData {
     name: string
     reputation_score?: string | number
   }
-  images?: { id: number; url: string; sort_order: number }[] // ← agregar esta línea
+  images?: { id: number; url: string; sort_order: number }[]
 }
 
 // ── Técnico: ver trabajos disponibles ────────────────────────────────────────
@@ -409,7 +411,7 @@ export interface StoreJobData {
   zone: string
   urgency: 'normal' | 'urgent' | 'emergency'
   budget?: number | null
-  image_urls?: string[]  // ← agregar esta línea
+  image_urls?: string[]
 }
 
 // ── Cliente: crear un trabajo ─────────────────────────────────────────────────
@@ -453,6 +455,7 @@ export async function getClientJobs(): Promise<{ success: boolean; data: JobData
 
   return response.json()
 }
+
 // ============================================================
 // CREDITS (Créditos del técnico)
 // ============================================================

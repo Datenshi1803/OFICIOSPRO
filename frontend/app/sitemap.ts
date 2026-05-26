@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next"
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://oficiospro.com"
+  const baseUrl = "https://oficios-pro.com"
 
   return [
     // ── Páginas principales ───────────────────────────────────────────

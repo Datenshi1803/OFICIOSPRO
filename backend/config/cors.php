@@ -16,19 +16,16 @@ return [
     */
     //usaremos * para permitir todas las rutas pero se debe especificar cada uno de ellas para mayor seguridad
     'paths' => ['api/*'],
-
     'allowed_methods' => ['*'],
-    // aca se colocará el dominio del frontend, en este caso localhost:3000, para permitir que el backend acepte solicitudes desde ese origen
-    'allowed_origins' => ['http://localhost:3000'],
-
+    'allowed_origins' => [
+        'http://localhost:3000',
+        'https://oficios-pro.com',
+        'https://www.oficios-pro.com',
+    ],
     'allowed_origins_patterns' => [],
-
     'allowed_headers' => ['*'],
-
     'exposed_headers' => [],
-
     'max_age' => 0,
-
-    'supports_credentials' => false,
+    'supports_credentials' => true,
 
 ];
