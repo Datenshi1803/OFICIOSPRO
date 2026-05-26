@@ -52,11 +52,12 @@ export default function ClienteLayout({ children }: ClienteLayoutProps) {
         <aside className={`fixed inset-y-4 left-4 z-50 w-[260px] transform rounded-2xl bg-card border shadow-xl transition-all duration-300 ease-out lg:translate-x-0 flex flex-col overflow-hidden ${sidebarOpen ? "translate-x-0" : "-translate-x-[120%]"}`}>
 
           <div className="flex h-20 items-center justify-between px-6 bg-gradient-to-b from-primary/5 to-transparent border-b border-border/50">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
-                <Wrench className="h-5 w-5" />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-foreground">OficiosPro</span>
+            <Link href="/" className="flex items-center gap-3 px-1">
+              <img
+                src="/Logo3.svg"
+                alt="OficiosPro"
+                className="h-14 w-auto object-contain drop-shadow-sm"
+              />
             </Link>
             <button className="lg:hidden text-muted-foreground" onClick={() => setSidebarOpen(false)}>
               <X className="h-5 w-5" />
