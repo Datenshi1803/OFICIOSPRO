@@ -22,7 +22,28 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className="bg-background">
+      <head>
+        {/* Microsoft Clarity */}
+        <Script
+          id="clarity-script"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(c,l,a,r,i,t,y){
+                c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+                t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+                y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+              })(window, document, "clarity", "script", "wxwsawh8u8");
+            `,
+          }}
+        />
+      </head>
       <body className="font-sans antialiased">
+        {/* Sincronización de ajustes locales */}
+        <Script id="settings-sync" strategy="beforeInteractive">
+          {`(function(){try{var rawTheme=localStorage.getItem('settings_theme');var rawLang=localStorage.getItem('settings_lang');var rawTimezone=localStorage.getItem('settings_timezone');var theme=rawTheme?JSON.parse(rawTheme):'claro';var lang=rawLang?JSON.parse(rawLang):'es';var timezone=rawTimezone?JSON.parse(rawTimezone):'America/Panama';var root=document.documentElement;if(theme==='oscuro'){root.classList.add('dark')}else{root.classList.remove('dark')}root.lang=lang;root.setAttribute('data-lang',lang);root.setAttribute('data-timezone',timezone);}catch(e){}})()`}
+        </Script>
+
         <Providers>
           {children}
           <CookieBanner />
@@ -30,11 +51,11 @@ export default function RootLayout({
 
         {process.env.NODE_ENV === 'production' && (
           <>
+            {/* Google Analytics */}
             <Script
               src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
               strategy="afterInteractive"
             />
-
             <Script id="google-analytics" strategy="afterInteractive">
               {`
                 window.dataLayer = window.dataLayer || [];
@@ -44,6 +65,7 @@ export default function RootLayout({
               `}
             </Script>
 
+            {/* Vercel Analytics */}
             <Analytics />
           </>
         )}
