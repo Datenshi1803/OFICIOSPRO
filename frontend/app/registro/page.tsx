@@ -398,12 +398,9 @@ function RegisterContent() {
         <section className="relative flex flex-col overflow-y-auto">
           {/* Mobile Header */}
           <div className="flex items-center justify-between border-b border-border p-4 lg:hidden">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-                <Wrench className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold text-foreground">OficiosPro</span>
-            </Link>
+            <Link href="/" className="relative z-10 flex items-center">
+          <img src="/Logo3.svg" alt="OficiosPro" className="h-16 w-auto object-contain" />
+        </Link>
             <Link href="/" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-4 w-4" />
               Volver

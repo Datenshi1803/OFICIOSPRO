@@ -38,31 +38,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const checkAuth = async () => {
-    setIsLoading(true)
-    
-    const token = localStorage.getItem("token")
-    const userData = localStorage.getItem("user")
+  setIsLoading(true)
+  const token = localStorage.getItem("token")
 
-    if (token && userData) {
-      try {
-        const parsedUser = JSON.parse(userData)
-        
-        // Verificar que el usuario esté activo
-        if (parsedUser.is_active === false) {
-          await logout()
-          return
-        }
-
-        setUser(parsedUser)
-      } catch {
-        await logout()
-      }
-    } else {
-      setUser(null)
-    }
-
+  if (!token) {
+    setUser(null)
     setIsLoading(false)
+    return
   }
+
+  try {
+    // Verificar token contra el backend en cada carga
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/me`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      }
+    )
+
+    if (!response.ok) {
+      // Token inválido o expirado — limpiar
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      setUser(null)
+    } else {
+      const data = await response.json()
+      // Actualizar user desde el backend, no desde localStorage
+      localStorage.setItem("user", JSON.stringify(data.data))
+      setUser(data.data)
+    }
+  } catch {
+    setUser(null)
+  }
+
+  setIsLoading(false)
+}
 
   const login = (token: string, userData: User) => {
     localStorage.setItem("token", token)
