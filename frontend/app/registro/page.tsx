@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import { useState, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
-import { Wrench, Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft, Building, CreditCard, Star, ShieldCheck, Users, CheckCircle } from "lucide-react"
+import { Wrench, Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft, Building, CreditCard, Star, ShieldCheck, Users, CheckCircle, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -19,6 +19,9 @@ import { Turnstile } from "@marsidev/react-turnstile"
 import type { TurnstileInstance } from "@marsidev/react-turnstile"
 import { registerUser } from "@/lib/api"
 import { useRouter } from "next/navigation"
+import { LocationData } from "@/types/location"
+import MapInner from "@/components/MapInner"
+import LocationPicker from "@/components/LocationPicker";
 import {
   validateNombre,
   validateEmail,
@@ -152,6 +155,10 @@ function RegisterContent() {
   const clienteTurnstileRef = useRef<TurnstileInstance>(null)
   const tecnicoTurnstileRef = useRef<TurnstileInstance>(null)
 
+  // ── Estado de Ubicación Geográfica (Mapas) ──────────────────────────────────
+  const [clienteUbicacion, setClienteUbicacion] = useState<LocationData | null>(null)
+  const [tecnicoUbicacion, setTecnicoUbicacion] = useState<LocationData | null>(null)
+
   // ── Estado cliente ─────────────────────────────────────────────────────────
   const [clienteData, setClienteData] = useState({
     nombre: "",
@@ -247,9 +254,16 @@ function RegisterContent() {
       password: clienteData.password,
       phone: clienteData.telefono,
       role: "client",
-      provincia: clienteProvincia,
-      distrito: clienteDistrito,
-      corregimiento: clienteCorregimiento,
+      provincia: clienteUbicacion ? clienteUbicacion.provincia : clienteProvincia,
+      distrito: clienteUbicacion ? clienteUbicacion.distrito : clienteDistrito,
+      neighborhood: clienteUbicacion ? clienteUbicacion.neighborhood : clienteCorregimiento,
+      ...(clienteUbicacion && {
+        ubicacion: {
+          lat: clienteUbicacion.lat,
+          lng: clienteUbicacion.lng,
+          displayName: clienteUbicacion.displayName,
+        },
+      }),
       captchaToken: clienteCaptcha,
     })
 
@@ -306,9 +320,16 @@ function RegisterContent() {
       password: tecnicoData.password,
       phone: tecnicoData.telefono,
       role: "technician",
-      provincia: tecnicoProvincia,
-      distrito: tecnicoDistrito,
-      corregimiento: tecnicoCorregimiento,
+      provincia: tecnicoUbicacion ? tecnicoUbicacion.provincia : tecnicoProvincia,
+      distrito: tecnicoUbicacion ? tecnicoUbicacion.distrito : tecnicoDistrito,
+      neighborhood: tecnicoUbicacion ? tecnicoUbicacion.neighborhood : tecnicoCorregimiento,
+      ...(tecnicoUbicacion && {
+        ubicacion: {
+          lat: tecnicoUbicacion.lat,
+          lng: tecnicoUbicacion.lng,
+          displayName: tecnicoUbicacion.displayName,
+        },
+      }),
       cedula: tecnicoData.cedula,
       specialty: tecnicoData.specialty,
       description: tecnicoData.descripcion,
@@ -398,9 +419,12 @@ function RegisterContent() {
         <section className="relative flex flex-col overflow-y-auto">
           {/* Mobile Header */}
           <div className="flex items-center justify-between border-b border-border p-4 lg:hidden">
-            <Link href="/" className="relative z-10 flex items-center">
-          <img src="/Logo3.svg" alt="OficiosPro" className="h-16 w-auto object-contain" />
-        </Link>
+            <Link href="/" className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+                <Wrench className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <span className="text-xl font-bold text-foreground">OficiosPro</span>
+            </Link>
             <Link href="/" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-4 w-4" />
               Volver
@@ -514,71 +538,6 @@ function RegisterContent() {
                         />
                       </div>
                       {clienteErrors.telefono && <p className="text-xs text-red-500">{clienteErrors.telefono}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="cliente-provincia">Provincia</Label>
-                      <Select
-                        value={clienteProvincia}
-                        onValueChange={(v) => {
-                          setClienteProvincia(v)
-                          setClienteDistrito("")
-                          setClienteCorregimiento("")
-                          setClienteData({ ...clienteData, provincia: v, distrito: "", corregimiento: "" })
-                        }}
-                      >
-                        <SelectTrigger id="cliente-provincia">
-                          <SelectValue placeholder="Selecciona tu provincia" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ubicacionesPanama.provincias.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="cliente-distrito">Distrito</Label>
-                      <Select
-                        value={clienteDistrito}
-                        onValueChange={(v) => {
-                          setClienteDistrito(v)
-                          setClienteCorregimiento("")
-                          setClienteData({ ...clienteData, distrito: v, corregimiento: "" })
-                        }}
-                        disabled={!clienteProvincia}
-                      >
-                        <SelectTrigger id="cliente-distrito">
-                          <SelectValue placeholder="Selecciona tu distrito" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {distritosOptions.map((d: any) => (
-                            <SelectItem key={d.id} value={d.id}>{d.nombre}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="cliente-corregimiento">Corregimiento</Label>
-                      <Select
-                        value={clienteCorregimiento}
-                        onValueChange={(v) => {
-                          setClienteCorregimiento(v)
-                          setClienteData({ ...clienteData, corregimiento: v })
-                        }}
-                        disabled={!clienteDistrito}
-                      >
-                        <SelectTrigger id="cliente-corregimiento">
-                          <SelectValue placeholder="Selecciona tu corregimiento" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {corregimientosOptions.map((c: any) => (
-                            <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     </div>
 
                     <div className="space-y-2">
@@ -831,70 +790,11 @@ function RegisterContent() {
                           </p>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="tecnico-provincia">Provincia</Label>
-                          <Select
-                            value={tecnicoProvincia}
-                            onValueChange={(v) => {
-                              setTecnicoProvincia(v)
-                              setTecnicoDistrito("")
-                              setTecnicoCorregimiento("")
-                              setTecnicoData({ ...tecnicoData, provincia: v, distrito: "", corregimiento: "" })
-                            }}
-                          >
-                            <SelectTrigger id="tecnico-provincia">
-                              <SelectValue placeholder="Selecciona tu provincia" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ubicacionesPanama.provincias.map((p) => (
-                                <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="tecnico-distrito">Distrito</Label>
-                          <Select
-                            value={tecnicoDistrito}
-                            onValueChange={(v) => {
-                              setTecnicoDistrito(v)
-                              setTecnicoCorregimiento("")
-                              setTecnicoData({ ...tecnicoData, distrito: v, corregimiento: "" })
-                            }}
-                            disabled={!tecnicoProvincia}
-                          >
-                            <SelectTrigger id="tecnico-distrito">
-                              <SelectValue placeholder="Selecciona tu distrito" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {tecnicoDistritosOptions.map((d: any) => (
-                                <SelectItem key={d.id} value={d.id}>{d.nombre}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="tecnico-corregimiento">Corregimiento</Label>
-                          <Select
-                            value={tecnicoCorregimiento}
-                            onValueChange={(v) => {
-                              setTecnicoCorregimiento(v)
-                              setTecnicoData({ ...tecnicoData, corregimiento: v })
-                            }}
-                            disabled={!tecnicoDistrito}
-                          >
-                            <SelectTrigger id="tecnico-corregimiento">
-                              <SelectValue placeholder="Selecciona tu corregimiento" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {tecnicoCorregimientosOptions.map((c: any) => (
-                                <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        {/* MAPA DE ZONA DE COBERTURA — TÉCNICO */}
+                        <LocationPicker 
+  value={clienteUbicacion} 
+  onChange={(data: LocationData) => setClienteUbicacion(data)} 
+/>
 
                         <div className="space-y-2">
                           <Label htmlFor="tecnico-experiencia">Años de experiencia</Label>

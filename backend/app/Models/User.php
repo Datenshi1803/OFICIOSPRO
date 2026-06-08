@@ -30,6 +30,9 @@ class User extends Authenticatable
         'provincia',
         'distrito',
         'corregimiento',
+        'lat',          // <-- Agregar
+        'lng',          // <-- Agregar
+        'display_name', // <-- Agregar
         'cedula',
         'specialty',
         'description',

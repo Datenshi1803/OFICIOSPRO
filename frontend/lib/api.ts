@@ -1,4 +1,6 @@
 // filepath: frontend/lib/api.ts
+import { LocationData } from '@/types/location'
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 export interface RegisterData {
@@ -9,7 +11,8 @@ export interface RegisterData {
   role: 'client' | 'technician';
   provincia?: string;
   distrito?: string;
-  corregimiento?: string;
+  neighborhood?: string;
+  ubicacion?: Pick<LocationData, 'lat' | 'lng' | 'displayName'>;
   // Técnico fields
   cedula?: string;
   specialty?: string;
@@ -412,6 +415,10 @@ export interface StoreJobData {
   urgency: 'normal' | 'urgent' | 'emergency'
   budget?: number | null
   image_urls?: string[]
+  ubicacion?: { lat: number; lng: number; displayName?: string }
+  provincia?: string
+  distrito?: string
+  neighborhood?: string
 }
 
 // ── Cliente: crear un trabajo ─────────────────────────────────────────────────

@@ -22,6 +22,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useRouter } from "next/navigation"
 import { storeJob } from "@/lib/api"
+import LocationPicker from "@/components/LocationPicker"
+import { LocationData } from "@/types/location"
 import { Loader2 } from "lucide-react"
 import { CldUploadWidget } from "next-cloudinary"
 
@@ -67,6 +69,7 @@ export default function NuevoTrabajoPage() {
   })
   const [previewImages, setPreviewImages] = useState<string[]>([])
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([])
+  const [jobUbicacion, setJobUbicacion] = useState<LocationData | null>(null)
 
   const removeImage = (index: number) => {
     setPreviewImages((prev) => prev.filter((_, i) => i !== index))
@@ -104,6 +107,10 @@ export default function NuevoTrabajoPage() {
       urgency: formData.urgencia,
       budget: formData.presupuesto ? parseFloat(formData.presupuesto) : null,
       image_urls: uploadedUrls,
+      ubicacion: jobUbicacion ? { lat: jobUbicacion.lat, lng: jobUbicacion.lng, displayName: jobUbicacion.displayName } : undefined,
+      provincia: jobUbicacion?.provincia,
+      distrito: jobUbicacion?.distrito,
+      neighborhood: jobUbicacion?.neighborhood,
     })
 
     router.push('/dashboard/cliente/trabajos')
@@ -344,13 +351,23 @@ export default function NuevoTrabajoPage() {
                   </p>
                 </div>
 
+                <div className="space-y-2">
+                  <Label>Ubicación exacta (opcional)</Label>
+                  <LocationPicker value={jobUbicacion} onChange={(d) => setJobUbicacion(d)} />
+                  {jobUbicacion && (
+                    <p className="text-sm text-muted-foreground">
+                      Seleccionado: {jobUbicacion.displayName} — {jobUbicacion.provincia}, {jobUbicacion.distrito}, {jobUbicacion.neighborhood}
+                    </p>
+                  )}
+                </div>
+
                 <div className="space-y-3">
                   <Label>Nivel de urgencia *</Label>
                   <RadioGroup
                     value={formData.urgencia}
-                    onValueChange={(v) => setFormData({ ...formData, urgencia: v })}
+                    onValueChange={(v) => setFormData({ ...formData, urgencia: v as 'normal' | 'urgent' | 'emergency' })}
                     className="space-y-3"
-                  >
+                  > 
                     <label className="flex cursor-pointer items-start gap-4 rounded-lg border border-input p-4 transition-colors hover:bg-muted/50 [&:has(:checked)]:border-primary [&:has(:checked)]:bg-primary/5">
                       <RadioGroupItem value="normal" className="mt-1" />
                       <div className="flex-1">
@@ -535,7 +552,7 @@ export default function NuevoTrabajoPage() {
               ) : step < 3 ? (
                 "Continuar"
               ) : (
-                "Publicar Trabajo"
+                "Publicar"
               )}
             </Button>
           </div>
@@ -544,3 +561,4 @@ export default function NuevoTrabajoPage() {
     </div>
   )
 }
+    
