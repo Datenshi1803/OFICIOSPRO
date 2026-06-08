@@ -1,3 +1,4 @@
+
 "use client"
 
 import Link from "next/link"
@@ -27,23 +28,6 @@ import { LocationData } from "@/types/location"
 import { Loader2 } from "lucide-react"
 import { CldUploadWidget } from "next-cloudinary"
 
-const zonasPanama = [
-  "Panamá Centro",
-  "San Francisco",
-  "Bella Vista",
-  "El Cangrejo",
-  "Obarrio",
-  "Costa del Este",
-  "Punta Pacífica",
-  "San Miguelito",
-  "Arraiján",
-  "La Chorrera",
-  "Colón",
-  "David",
-  "Santiago",
-  "Chitré",
-]
-
 const categorias = [
   { value: "mantenimiento", label: "Mantenimiento preventivo" },
   { value: "instalacion", label: "Instalación de equipo nuevo" },
@@ -62,9 +46,7 @@ export default function NuevoTrabajoPage() {
     titulo: "",
     descripcion: "",
     categoria: "",
-    zona: "",
-    direccion: "",
-    urgencia: "normal" as 'normal' | 'urgent' | 'emergency',
+    urgencia: "normal" as "normal" | "urgente" | "emergencia", 
     presupuesto: "",
   })
   const [previewImages, setPreviewImages] = useState<string[]>([])
@@ -82,39 +64,48 @@ export default function NuevoTrabajoPage() {
       setStep(2)
     } else if (step === 2) {
       setStep(3)
-    }  else {
-  setIsLoading(true)
-  setError("")
+    } else {
+      setIsLoading(true)
+      setError("")
 
-  const categoryMap: Record<string, number> = {
-    'mantenimiento': 1,
-    'reparacion': 2,
-    'instalacion': 3,
-    'limpieza': 4,
-    'recarga': 5,
-    'diagnostico': 2
-  }
+      const categoryMap: Record<string, number> = {
+        'mantenimiento': 1,
+        'reparacion': 2,
+        'instalacion': 3,
+        'limpieza': 4,
+        'recarga': 5,
+        'diagnostico': 2
+      }
 
-  const category_id = categoryMap[formData.categoria] || 1
+      const category_id = categoryMap[formData.categoria] || 1
+      const urgencyMap: Record<string, 'normal' | 'urgent' | 'emergency'> = {
+        'normal': 'normal',
+        'urgente': 'urgent',
+        'emergencia': 'emergency'
+      }
 
-  try {
-    console.log('URLs a enviar:', uploadedUrls) // ← agregar aquí
-    await storeJob({
-      title: formData.titulo,
-      description: formData.descripcion + (formData.direccion ? `\n\nDirección: ${formData.direccion}` : ''),
-      category_id,
-      zone: formData.zona,
-      urgency: formData.urgencia,
-      budget: formData.presupuesto ? parseFloat(formData.presupuesto) : null,
-      image_urls: uploadedUrls,
-      ubicacion: jobUbicacion ? { lat: jobUbicacion.lat, lng: jobUbicacion.lng, displayName: jobUbicacion.displayName } : undefined,
-      provincia: jobUbicacion?.provincia,
-      distrito: jobUbicacion?.distrito,
-      neighborhood: jobUbicacion?.neighborhood,
-    })
+      try {
+        console.log('URLs a enviar:', uploadedUrls)
+        
+        // Formamos la descripción añadiendo los datos de geolocalización
+        const direccionTexto = jobUbicacion?.displayName ? `\n\nDirección aproximada: ${jobUbicacion.displayName}` : ''
 
-    router.push('/dashboard/cliente/trabajos')
-  } catch (err: any) {
+        await storeJob({
+          title: formData.titulo,
+          description: formData.descripcion + direccionTexto,
+          category_id,
+          // Mandamos el corregimiento dinámico como la "zona" para el backend
+          zone: jobUbicacion?.displayName || 'No especificado',
+          urgency: urgencyMap[formData.urgencia] || 'normal',
+          budget: formData.presupuesto ? parseFloat(formData.presupuesto) : null,
+          image_urls: uploadedUrls,
+          // Opcional: si tu API acepta coordenadas directas en storeJob:
+          // latitude: jobUbicacion?.lat,
+          // longitude: jobUbicacion?.lng
+        })
+
+        router.push('/dashboard/cliente/trabajos')
+      } catch (err: any) {
         setError(err.message || 'Error al publicar el trabajo')
         setIsLoading(false)
       }
@@ -126,7 +117,8 @@ export default function NuevoTrabajoPage() {
       return formData.titulo && formData.descripcion && formData.categoria
     }
     if (step === 2) {
-      return formData.zona && formData.urgencia
+      // Ahora es obligatorio seleccionar un punto en el mapa para continuar
+      return jobUbicacion !== null && formData.urgencia
     }
     return true
   }
@@ -172,12 +164,13 @@ export default function NuevoTrabajoPage() {
           ].map((s) => (
             <div key={s.id} className="flex flex-col items-center gap-2">
               <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors duration-300 ${s.id < step
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors duration-300 ${
+                  s.id < step
                     ? "bg-primary text-primary-foreground"
                     : s.id === step
                       ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
                       : "bg-muted text-muted-foreground border-2 border-background"
-                  }`}
+                }`}
               >
                 {s.id < step ? <CheckCircle2 className="h-5 w-5" /> : s.id}
               </div>
@@ -314,50 +307,22 @@ export default function NuevoTrabajoPage() {
               <CardHeader>
                 <CardTitle>Ubicación y urgencia</CardTitle>
                 <CardDescription>
-                  Indica dónde necesitas el servicio y qué tan urgente es
+                  Indica en el mapa dónde necesitas el servicio y qué tan urgente es
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                
+                {/* Mapa unificado obligatorio */}
                 <div className="space-y-2">
-                  <Label htmlFor="zona">Zona en Panamá *</Label>
-                  <Select
-                    value={formData.zona}
-                    onValueChange={(v) => setFormData({ ...formData, zona: v })}
-                  >
-                    <SelectTrigger>
-                      <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Selecciona tu zona" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {zonasPanama.map((zona) => (
-                        <SelectItem key={zona} value={zona}>
-                          {zona}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="direccion">Dirección aproximada (opcional)</Label>
-                  <Input
-                    id="direccion"
-                    placeholder="Ej: Calle 50, Edificio Plaza, Piso 5"
-                    value={formData.direccion}
-                    onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    La dirección exacta solo se compartirá con el técnico seleccionado
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Ubicación exacta (opcional)</Label>
+                  <Label>Selecciona la ubicación en el mapa *</Label>
                   <LocationPicker value={jobUbicacion} onChange={(d) => setJobUbicacion(d)} />
                   {jobUbicacion && (
-                    <p className="text-sm text-muted-foreground">
-                      Seleccionado: {jobUbicacion.displayName} — {jobUbicacion.provincia}, {jobUbicacion.distrito}, {jobUbicacion.neighborhood}
-                    </p>
+                    <div className="mt-2 p-3 bg-muted rounded-lg flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-semibold text-foreground">Detectado:</span> {jobUbicacion.displayName}, {jobUbicacion.distrito}, {jobUbicacion.provincia}
+                      </p>
+                    </div>
                   )}
                 </div>
 
@@ -365,7 +330,7 @@ export default function NuevoTrabajoPage() {
                   <Label>Nivel de urgencia *</Label>
                   <RadioGroup
                     value={formData.urgencia}
-                    onValueChange={(v) => setFormData({ ...formData, urgencia: v as 'normal' | 'urgent' | 'emergency' })}
+                    onValueChange={(v) => setFormData({ ...formData, urgencia: v as "normal" | "urgente" | "emergencia" })}
                     className="space-y-3"
                   > 
                     <label className="flex cursor-pointer items-start gap-4 rounded-lg border border-input p-4 transition-colors hover:bg-muted/50 [&:has(:checked)]:border-primary [&:has(:checked)]:bg-primary/5">
@@ -467,19 +432,28 @@ export default function NuevoTrabajoPage() {
 
                     <div>
                       <p className="text-xs text-muted-foreground">Descripción</p>
-                      <p className="text-sm text-foreground">{formData.descripcion}</p>
+                      <p className="text-sm text-foreground whitespace-pre-line">{formData.descripcion}</p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs text-muted-foreground">Zona</p>
-                        <p className="font-medium text-foreground">{formData.zona}</p>
+                        <p className="text-xs text-muted-foreground">Zona / Corregimiento</p>
+                        <p className="font-medium text-foreground">
+                          {jobUbicacion?.displayName || "No especificado"}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Urgencia</p>
                         <p className="font-medium capitalize text-foreground">{formData.urgencia}</p>
                       </div>
                     </div>
+
+                    {jobUbicacion?.displayName && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Ubicación aproximada en Mapa</p>
+                        <p className="text-sm font-medium text-foreground">{jobUbicacion.displayName}</p>
+                      </div>
+                    )}
 
                     {formData.presupuesto && (
                       <div>
@@ -511,7 +485,7 @@ export default function NuevoTrabajoPage() {
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="mt-0.5 h-4 w-4 text-accent" />
-                      <span>Tu trabajo será visible para técnicos en {formData.zona}</span>
+                      <span>Tu trabajo será visible para técnicos en {jobUbicacion?.displayName || 'la zona'}</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="mt-0.5 h-4 w-4 text-accent" />
@@ -520,10 +494,6 @@ export default function NuevoTrabajoPage() {
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="mt-0.5 h-4 w-4 text-accent" />
                       <span>Podrás comparar propuestas y elegir la mejor opción</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-accent" />
-                      <span>Te notificaremos cada vez que recibas una cotización</span>
                     </li>
                   </ul>
                 </div>
@@ -561,4 +531,4 @@ export default function NuevoTrabajoPage() {
     </div>
   )
 }
-    
+
