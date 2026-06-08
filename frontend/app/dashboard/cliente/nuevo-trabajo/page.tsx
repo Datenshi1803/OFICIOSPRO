@@ -57,14 +57,14 @@ export default function NuevoTrabajoPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [formData, setFormData] = useState({
-    titulo: "",
-    descripcion: "",
-    categoria: "",
-    zona: "",
-    direccion: "",
-    urgencia: "normal" as 'normal' | 'urgent' | 'emergency',
-    presupuesto: "",
-  })
+  titulo: "",
+  descripcion: "",
+  categoria: "",
+  zona: "",
+  direccion: "",
+  urgencia: "normal" as "normal" | "urgente" | "emergencia", 
+  presupuesto: "",
+})
   const [previewImages, setPreviewImages] = useState<string[]>([])
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([])
 
@@ -93,18 +93,22 @@ export default function NuevoTrabajoPage() {
   }
 
   const category_id = categoryMap[formData.categoria] || 1
-
+  const urgencyMap: Record<string, 'normal' | 'urgent' | 'emergency'> = {
+    'normal': 'normal',
+    'urgente': 'urgent',
+    'emergencia': 'emergency'
+  }
   try {
-    console.log('URLs a enviar:', uploadedUrls) // ← agregar aquí
-    await storeJob({
-      title: formData.titulo,
-      description: formData.descripcion + (formData.direccion ? `\n\nDirección: ${formData.direccion}` : ''),
-      category_id,
-      zone: formData.zona,
-      urgency: formData.urgencia,
-      budget: formData.presupuesto ? parseFloat(formData.presupuesto) : null,
-      image_urls: uploadedUrls,
-    })
+  console.log('URLs a enviar:', uploadedUrls)
+  await storeJob({
+    title: formData.titulo,
+    description: formData.descripcion + (formData.direccion ? `\n\nDirección: ${formData.direccion}` : ''),
+    category_id,
+    zone: formData.zona,
+    urgency: urgencyMap[formData.urgencia] || 'normal', // ✨ Usamos el mapa de traducción aquí
+    budget: formData.presupuesto ? parseFloat(formData.presupuesto) : null,
+    image_urls: uploadedUrls,
+  })
 
     router.push('/dashboard/cliente/trabajos')
   } catch (err: any) {
@@ -348,7 +352,7 @@ export default function NuevoTrabajoPage() {
                   <Label>Nivel de urgencia *</Label>
                   <RadioGroup
                     value={formData.urgencia}
-                    onValueChange={(v) => setFormData({ ...formData, urgencia: v })}
+                    onValueChange={(v) => setFormData({ ...formData, urgencia: v as "normal" | "urgente" | "emergencia" })}
                     className="space-y-3"
                   >
                     <label className="flex cursor-pointer items-start gap-4 rounded-lg border border-input p-4 transition-colors hover:bg-muted/50 [&:has(:checked)]:border-primary [&:has(:checked)]:bg-primary/5">
