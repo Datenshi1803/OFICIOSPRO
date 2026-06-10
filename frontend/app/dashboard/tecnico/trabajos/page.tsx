@@ -191,7 +191,7 @@ export default function TecnicoTrabajos() {
                               <p className="text-sm text-muted-foreground line-clamp-2">{trabajo.description}</p>
                               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                                 <span className="flex items-center gap-1">
-                                  <MapPin className="h-4 w-4" />{trabajo.zone}
+                                  <MapPin className="h-4 w-4" />{trabajo.provincia}, {trabajo.distrito}
                                 </span>
                                 {trabajo.budget && (
                                   <span className="flex items-center gap-1">
@@ -267,7 +267,7 @@ export default function TecnicoTrabajos() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="font-medium flex items-center gap-1"><MapPin className="h-4 w-4" /> Zona</p>
-                  <p className="text-muted-foreground mt-1">{selectedJob.zone}</p>
+                  <p className="text-muted-foreground mt-1">{selectedJob.provincia}, {selectedJob.distrito}</p>
                 </div>
                 <div>
                   <p className="font-medium flex items-center gap-1"><Calendar className="h-4 w-4" /> Creado el</p>

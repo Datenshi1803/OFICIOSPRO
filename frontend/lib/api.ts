@@ -263,7 +263,10 @@ export interface JobData {
   category_id: number
   title: string
   description: string
-  zone: string
+  provincia: string                          // antes: zone: string
+  distrito: string                           // nuevo
+  latitude?: number | null                   // nuevo
+  longitude?: number | null                  // nuevo
   urgency: 'normal' | 'urgent' | 'emergency'
   budget: string | null
   status: string
@@ -411,14 +414,13 @@ export interface StoreJobData {
   title: string
   description: string
   category_id: number
-  zone: string
+  provincia: string                          // required, era opcional
+  distrito: string                           // required, era opcional
+  latitude?: number                          // nuevo, opcional
+  longitude?: number                         // nuevo, opcional
   urgency: 'normal' | 'urgent' | 'emergency'
   budget?: number | null
   image_urls?: string[]
-  ubicacion?: { lat: number; lng: number; displayName?: string }
-  provincia?: string
-  distrito?: string
-  neighborhood?: string
 }
 
 // ── Cliente: crear un trabajo ─────────────────────────────────────────────────
@@ -631,4 +633,18 @@ export async function acceptBid(
   }
 
   return response.json();
+}
+
+// ── Categorías ────────────────────────────────────────────────────────────────
+export async function getCategories(): Promise<{ success: boolean; data: { id: number; name: string }[] }> {
+  const response = await fetch(`${API_URL}/categories`, {
+    headers: { Accept: 'application/json' },
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || 'Error al cargar categorías')
+  }
+
+  return response.json()
 }

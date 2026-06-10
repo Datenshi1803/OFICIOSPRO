@@ -1,8 +1,7 @@
-
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Wrench,
   ArrowLeft,
@@ -22,22 +21,26 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useRouter } from "next/navigation"
-import { storeJob } from "@/lib/api"
+import { storeJob, getCategories } from "@/lib/api"
 import LocationPicker from "@/components/LocationPicker"
 import { LocationData } from "@/types/location"
 import { Loader2 } from "lucide-react"
 import { CldUploadWidget } from "next-cloudinary"
 
-const categorias = [
-  { value: "mantenimiento", label: "Mantenimiento preventivo" },
-  { value: "instalacion", label: "Instalación de equipo nuevo" },
-  { value: "reparacion", label: "Reparación de fallas" },
-  { value: "limpieza", label: "Limpieza profunda" },
-  { value: "recarga", label: "Recarga de gas refrigerante" },
-  { value: "diagnostico", label: "Diagnóstico de problemas" },
-]
+
+
 
 export default function NuevoTrabajoPage() {
+  const [categorias, setCategorias] = useState<{ id: number; name: string }[]>([])
+const [categoriasLoading, setCategoriasLoading] = useState(true)
+
+useEffect(() => {
+  getCategories()
+    .then((res) => setCategorias(res.data))
+    .catch(() => setCategorias([]))
+    .finally(() => setCategoriasLoading(false))
+}, [])
+
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
@@ -77,7 +80,7 @@ export default function NuevoTrabajoPage() {
         'diagnostico': 2
       }
 
-      const category_id = categoryMap[formData.categoria] || 1
+       const category_id = parseInt(formData.categoria)
       const urgencyMap: Record<string, 'normal' | 'urgent' | 'emergency'> = {
         'normal': 'normal',
         'urgente': 'urgent',
@@ -86,22 +89,18 @@ export default function NuevoTrabajoPage() {
 
       try {
         console.log('URLs a enviar:', uploadedUrls)
-        
-        // Formamos la descripción añadiendo los datos de geolocalización
-        const direccionTexto = jobUbicacion?.displayName ? `\n\nDirección aproximada: ${jobUbicacion.displayName}` : ''
 
         await storeJob({
           title: formData.titulo,
-          description: formData.descripcion + direccionTexto,
+          description: formData.descripcion,
           category_id,
-          // Mandamos el corregimiento dinámico como la "zona" para el backend
-          zone: jobUbicacion?.displayName || 'No especificado',
+          provincia: jobUbicacion!.provincia,
+          distrito:  jobUbicacion!.distrito,
+          latitude:  jobUbicacion!.lat,
+          longitude: jobUbicacion!.lng,
           urgency: urgencyMap[formData.urgencia] || 'normal',
           budget: formData.presupuesto ? parseFloat(formData.presupuesto) : null,
           image_urls: uploadedUrls,
-          // Opcional: si tu API acepta coordenadas directas en storeJob:
-          // latitude: jobUbicacion?.lat,
-          // longitude: jobUbicacion?.lng
         })
 
         router.push('/dashboard/cliente/trabajos')
@@ -211,20 +210,21 @@ export default function NuevoTrabajoPage() {
                 <div className="space-y-2">
                   <Label htmlFor="categoria">Tipo de servicio *</Label>
                   <Select
-                    value={formData.categoria}
-                    onValueChange={(v) => setFormData({ ...formData, categoria: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona el tipo de servicio" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categorias.map((cat) => (
-                        <SelectItem key={cat.value} value={cat.value}>
-                          {cat.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      value={formData.categoria}
+                      onValueChange={(v) => setFormData({ ...formData, categoria: v })}
+                      disabled={categoriasLoading}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={categoriasLoading ? "Cargando..." : "Selecciona el tipo de servicio"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categorias.map((cat) => (
+                          <SelectItem key={cat.id} value={String(cat.id)}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                 </div>
 
                 <div className="space-y-2">
@@ -426,7 +426,7 @@ export default function NuevoTrabajoPage() {
                     <div>
                       <p className="text-xs text-muted-foreground">Tipo de servicio</p>
                       <p className="font-medium text-foreground">
-                        {categorias.find((c) => c.value === formData.categoria)?.label}
+                        {categorias.find((c) => String(c.id) === formData.categoria)?.name}
                       </p>
                     </div>
 
@@ -437,23 +437,23 @@ export default function NuevoTrabajoPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs text-muted-foreground">Zona / Corregimiento</p>
+                        <p className="text-xs text-muted-foreground">Provincia</p>
                         <p className="font-medium text-foreground">
-                          {jobUbicacion?.displayName || "No especificado"}
+                          {jobUbicacion?.provincia || "No especificado"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Urgencia</p>
-                        <p className="font-medium capitalize text-foreground">{formData.urgencia}</p>
+                        <p className="text-xs text-muted-foreground">Distrito</p>
+                        <p className="font-medium text-foreground">
+                          {jobUbicacion?.distrito || "No especificado"}
+                        </p>
                       </div>
                     </div>
 
-                    {jobUbicacion?.displayName && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Ubicación aproximada en Mapa</p>
-                        <p className="text-sm font-medium text-foreground">{jobUbicacion.displayName}</p>
-                      </div>
-                    )}
+                    <div>
+                      <p className="text-xs text-muted-foreground">Urgencia</p>
+                      <p className="font-medium capitalize text-foreground">{formData.urgencia}</p>
+                    </div>
 
                     {formData.presupuesto && (
                       <div>
@@ -485,7 +485,7 @@ export default function NuevoTrabajoPage() {
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="mt-0.5 h-4 w-4 text-accent" />
-                      <span>Tu trabajo será visible para técnicos en {jobUbicacion?.displayName || 'la zona'}</span>
+                      <span>Tu trabajo será visible para técnicos en {jobUbicacion ? `${jobUbicacion.distrito}, ${jobUbicacion.provincia}` : 'la zona seleccionada'}</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="mt-0.5 h-4 w-4 text-accent" />
@@ -531,4 +531,3 @@ export default function NuevoTrabajoPage() {
     </div>
   )
 }
-

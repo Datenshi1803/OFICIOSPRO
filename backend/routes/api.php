@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\WebhookController;
 // ============================================================
 
 Route::get('/test', [TestController::class, 'index']);
+Route::get('/categories', [JobController::class, 'categories']);
 
 Route::prefix('auth')->group(function () {
     Route::post('/login',    [AuthController::class, 'login'])
@@ -44,7 +45,7 @@ Route::middleware('auth:sanctum', 'throttle:api')->group(function () {
         return response()->json([
             'success' => true,
             'data'    => $request->user()->only([
-                'id', 'name', 'email', 'role', 'is_active',
+                'id', 'name', 'email', 'role', 'is_active','is_verified'
             ]),
         ]);
     });

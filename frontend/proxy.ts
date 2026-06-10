@@ -19,7 +19,7 @@ const authLimit = new Ratelimit({
 
 const sensitiveLimit = new Ratelimit({
   redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(5, "60 s"),
+  limiter: Ratelimit.slidingWindow(30, "60 s"),
   prefix: "rl:sensitive",
   analytics: true,
 });
@@ -36,7 +36,7 @@ function getRateLimiter(pathname: string) {
   if (pathname.includes("/login") || pathname.includes("/register")) {
     return authLimit;
   }
-  if (pathname.includes("/dashboard/admin") || pathname.includes("/api/admin")) {
+  if (pathname.includes("/admin") || pathname.includes("/api/admin")) {
     return sensitiveLimit;
   }
   return generalLimit;
@@ -75,7 +75,7 @@ export const config = {
   matcher: [
     "/login",
     "/register",
-    "/dashboard/:path*",
+    "/admin/:path*",
     "/api/:path*",
   ],
 };
