@@ -168,7 +168,7 @@ class JobController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'No se pudo guardar el trabajo. Verifica los datos e intenta nuevamente.',
-                'debug'   => $e->getMessage()
+                
             ], 500);
 
         } catch (\Exception $e) {
