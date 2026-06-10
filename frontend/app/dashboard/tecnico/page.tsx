@@ -179,8 +179,8 @@ export default function TecnicoDashboard() {
   const trabajosFiltrados = trabajos.filter(
     (j) =>
       j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      j.zone.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      j.description.toLowerCase().includes(searchQuery.toLowerCase()),
+(j.provincia + ' ' + j.distrito).toLowerCase().includes(searchQuery.toLowerCase()) ||
+j.description.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const totalAceptadas = misCotizaciones.filter((b) => b.status === "accepted").length
@@ -328,7 +328,7 @@ export default function TecnicoDashboard() {
                             <div className="flex flex-wrap items-center gap-4 pt-2">
                               <div className="flex items-center gap-1.5 rounded-lg bg-secondary/50 px-3 py-1 text-sm font-medium text-muted-foreground">
                                 <MapPin className="h-4 w-4 text-primary" />
-                                {trabajo.zone}
+                                {trabajo.provincia}, {trabajo.distrito}
                               </div>
                               {trabajo.budget && (
                                 <div className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-600">
@@ -464,7 +464,7 @@ export default function TecnicoDashboard() {
                     <p className="mb-1 text-xs text-muted-foreground">Zona</p>
                     <div className="flex items-center gap-1.5 font-medium">
                       <MapPin className="h-4 w-4 text-primary" />
-                      {detailJob.zone}
+                      {detailJob.provincia}, {detailJob.distrito}
                     </div>
                   </div>
                   <div className="rounded-xl bg-muted/30 p-3">

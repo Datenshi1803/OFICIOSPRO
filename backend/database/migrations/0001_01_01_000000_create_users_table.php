@@ -25,6 +25,11 @@ return new class extends Migration
             $table->string('distrito', 100)->nullable();
             $table->string('corregimiento', 100)->nullable();
 
+            // Agregar estos campos esenciales para Leaflet/Privacy Fuzzing
+            $table->double('lat', 10, 6)->nullable();
+            $table->double('lng', 10, 6)->nullable();
+            $table->string('display_name', 500)->nullable();
+
             // Verificación
             $table->boolean('is_verified')->default(false);
             $table->string('verification_token', 100)->nullable();

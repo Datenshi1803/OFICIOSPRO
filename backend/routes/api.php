@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\WebhookController;
 // ============================================================
 
 Route::get('/test', [TestController::class, 'index']);
+Route::get('/categories', [JobController::class, 'categories']);
 
 Route::prefix('auth')->group(function () {
     Route::post('/login',    [AuthController::class, 'login'])
@@ -25,6 +26,7 @@ Route::prefix('auth')->group(function () {
 
 // Webhook — PagueloFácil llama directamente, sin token
 Route::post('/webhooks/paguelofacil', [WebhookController::class, 'paguelofacil'])
+    ->middleware('throttle:30,1')
     ->name('webhooks.paguelofacil');
 
 // Paquetes de créditos — público para que el frontend los muestre sin login
@@ -34,7 +36,7 @@ Route::get('/bid-credit-packages', [PaymentController::class, 'packages'])
 // ============================================================
 // RUTAS PROTEGIDAS — auth:sanctum en todo
 // ============================================================
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:sanctum', 'throttle:api')->group(function () {
 
     // ── Logout y perfil propio ────────────────────────────────────────────────
     Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -43,7 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
         return response()->json([
             'success' => true,
             'data'    => $request->user()->only([
-                'id', 'name', 'email', 'role', 'is_active',
+                'id', 'name', 'email', 'role', 'is_active','is_verified'
             ]),
         ]);
     });

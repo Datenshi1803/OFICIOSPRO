@@ -81,8 +81,13 @@ class AuthController extends Controller
                 'bio'              => 'nullable|string|max:500',
                 'provincia'        => 'nullable|string|max:100',
                 'distrito'         => 'nullable|string|max:100',
-                'corregimiento'    => 'nullable|string|max:100',
-
+                'neighborhood'     => 'nullable|string|max:100',
+                
+                // Mantenemos las coordenadas validadas estructuralmente como nullables
+                'ubicacion.lat'    => 'nullable|numeric',
+                'ubicacion.lng'    => 'nullable|numeric',
+                'ubicacion.displayName' => 'nullable|string|max:500', // Campo extra de Nominatim
+                
                 // Solo técnicos
                 'cedula'           => 'required_if:role,technician|string|max:20',
                 'specialty'        => 'required_if:role,technician|string|max:100',
@@ -107,6 +112,26 @@ class AuthController extends Controller
                 ], 422);
             }
 
+            // --- CÁLCULO DEL SERVER FUZZ PARA PRIVACIDAD ---
+            $latFinal = null;
+            $lngFinal = null;
+
+            // Solo aplica el ruido si el frontend envió coordenadas válidas
+            if ($request->has('ubicacion.lat') && $request->has('ubicacion.lng')) {
+                $clientLat = $request->input('ubicacion.lat');
+                $clientLng = $request->input('ubicacion.lng');
+
+                if ($clientLat && $clientLng) {
+                    // Doble protección: añade ±300m aproximados usando números pseudoaleatorios flotantes
+                    $serverFuzzLat = $clientLat + ((rand() / getrandmax()) - 0.5) * 0.003;
+                    $serverFuzzLng = $clientLng + ((rand() / getrandmax()) - 0.5) * 0.003;
+                    
+                    $latFinal = round($serverFuzzLat, 5);
+                    $lngFinal = round($serverFuzzLng, 5);
+                }
+            }
+            // -----------------------------------------------
+
             $user = User::create([
                 'name'             => strip_tags($request->name),
                 'email'            => strtolower(trim($request->email)),
@@ -116,9 +141,16 @@ class AuthController extends Controller
                 'phone'            => preg_replace('/[^0-9+\-\s]/', '', $request->phone),
                 'avatar_url'       => $request->avatar_url,
                 'bio'              => strip_tags($request->bio),
+                
+                // Mapeo geográfico directo
                 'provincia'        => strip_tags($request->provincia),
                 'distrito'         => strip_tags($request->distrito),
-                'corregimiento'    => strip_tags($request->corregimiento),
+                'corregimiento'    => strip_tags($request->neighborhood),
+                'lat'              => $latFinal,
+                'lng'              => $lngFinal,
+                'display_name'     => strip_tags($request->input('ubicacion.displayName')),
+                
+                // Solo técnicos
                 'cedula'           => strip_tags($request->cedula),
                 'specialty'        => strip_tags($request->specialty),
                 'description'      => strip_tags($request->description),
@@ -153,6 +185,7 @@ class AuthController extends Controller
                 'user'    => $user,
                 'token'   => $token,
             ], 201);
+
         } catch (\Illuminate\Database\QueryException $e) {
             // Capturar errores de BD específicos
             if (str_contains($e->getMessage(), 'unique') || str_contains($e->getMessage(), 'users_email_unique')) {

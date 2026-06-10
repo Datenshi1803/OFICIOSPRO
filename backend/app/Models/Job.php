@@ -7,21 +7,26 @@ use App\Models\JobImage;
 
 class Job extends Model
 {
-    protected $fillable = [
-        'ulid',
-        'code',
-        'client_id',
-        'category_id',
-        'technician_id',
-        'title',
-        'description',
-        'zone',
-        'urgency',
-        'budget',
-        'status',
-        'accepted_bid_id',
-        'completed_at',
-    ];
+    // app/Models/Job.php
+
+protected $fillable = [
+    'ulid',
+    'code',
+    'client_id',
+    'category_id',
+    'technician_id',
+    'title',
+    'description',
+    'provincia',    // ← agregar
+    'distrito',     // ← agregar
+    'latitude',     // ← agregar
+    'longitude',    // ← agregar
+    'urgency',
+    'budget',
+    'status',
+    'accepted_bid_id',
+    'completed_at',
+];
 
     protected $casts = [
         'completed_at' => 'datetime',

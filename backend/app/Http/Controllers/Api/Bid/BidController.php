@@ -93,7 +93,7 @@ public function store(Request $request): JsonResponse
      */
     public function myBids(Request $request): JsonResponse
     {
-        $bids = Bid::with('job:id,code,title,zone,status,urgency')
+        $bids = Bid::with('job:id,code,title,provincia,distrito,status,urgency')
             ->where('technician_id', $request->user()->id)
             ->orderByDesc('created_at')
             ->get();

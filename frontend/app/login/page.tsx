@@ -393,7 +393,7 @@ export default function LoginPage() {
           <div className="flex items-center justify-between border-b border-slate-200/70 bg-white/70 p-4 backdrop-blur lg:hidden">
             <Link href="/" className="flex items-center">
               <img
-                src="/Logo3.png"
+                src="/Logo3.svg"
                 alt="OficiosPro"
                 className="h-14 w-auto object-contain"
               />
