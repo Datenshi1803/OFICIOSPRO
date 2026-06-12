@@ -111,28 +111,21 @@ export default function LandingPage() {
             </div>
 
             {/* COLUMNA DERECHA */}
-<div className="relative mt-8 lg:mt-0">
+<div className="hidden lg:block relative mt-8 lg:mt-0">
+  <div className="relative flex items-center justify-end h-[640px]">
 
-  <div className="relative flex items-center justify-end h-[520px] lg:h-[640px]">
-
-    {/* Glow decorativo suave */}
     <div className="absolute right-10 bottom-20 w-[420px] h-[420px] bg-cyan-200/30 blur-3xl rounded-full" />
     <div className="absolute top-16 right-36 w-[220px] h-[220px] bg-blue-200/20 blur-3xl rounded-full" />
 
-    {/* Imagen principal */}
     <Image
-  src="/fondoTec.png"
-  alt="Técnico profesional de aire acondicionado"
-  width={1100}
-  height={900}
-  priority
-  className="relative z-10 w-[115%] lg:w-[128%] max-w-[980px] lg:max-w-[1100px] 
-             h-auto object-contain -translate-y-20 lg:-translate-y-28 
-             drop-shadow-[0_40px_60px_rgba(0,0,0,0.20)] transition-all 
-             duration-500 hover:scale-[1.02]"
-/>
+      src="/fondoTec.png"
+      alt="Técnico profesional de aire acondicionado"
+      width={1100}
+      height={900}
+      priority
+      className="relative z-10 w-[128%] max-w-[1100px] h-auto object-contain -translate-y-28 drop-shadow-[0_40px_60px_rgba(0,0,0,0.20)] transition-all duration-500 hover:scale-[1.02]"
+    />
 
-    {/* Tarjeta flotante superior */}
     <div className="absolute top-8 left-0 z-20 hidden md:flex items-center gap-3 bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-2xl px-5 py-4">
       <div className="w-11 h-11 rounded-xl bg-emerald-100 flex items-center justify-center">
         <Award className="w-5 h-5 text-emerald-600" />
@@ -145,7 +138,6 @@ export default function LandingPage() {
     </div>
 
   </div>
-
 </div>
             
           </div>
