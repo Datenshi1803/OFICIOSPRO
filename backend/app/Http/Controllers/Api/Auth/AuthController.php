@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -74,7 +75,12 @@ class AuthController extends Controller
                 'captchaToken'     => ['required', new TurnstileValid],  // Verificación Cloudflare Turnstile
                 'name'             => 'required|string|max:150',
                 'email'            => 'required|email|unique:users,email',
-                'password'         => 'required|string|min:8|regex:/^(?=.*[A-Z])(?=.*\d).+$/',
+                'password'         => [
+                    'required',
+                    'string',
+                    'min:8',
+                    'regex:/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>\-_]).+$/',
+                ],
                 'role'             => 'required|in:client,technician',
                 'phone'            => 'nullable|string|max:20',
                 'avatar_url'       => 'nullable|url|max:500',
@@ -97,7 +103,7 @@ class AuthController extends Controller
             ], [
                 'captchaToken.required'        => 'La verificación de seguridad es obligatoria.',
                 'email.unique'                 => 'Este correo ya está registrado.',
-                'password.regex'               => 'La contraseña debe tener al menos una mayúscula y un número.',
+                'password.regex'               => 'La contraseña debe tener al menos una mayúscula, una minúscula, un número y un carácter especial.',
                 'cedula.required_if'           => 'La cédula es obligatoria para técnicos.',
                 'specialty.required_if'        => 'La especialidad es obligatoria para técnicos.',
                 'experience_years.required_if' => 'Los años de experiencia son obligatorios para técnicos.',
@@ -319,7 +325,14 @@ class AuthController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'name'          => 'sometimes|string|max:150',
+            'name'          => ['sometimes', 'required', 'string', 'max:150', 'regex:/^[\pL]+(?: [\pL]+)*$/u'],
+            'email'         => [
+                'sometimes',
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($user->id),
+            ],
             'phone'         => 'sometimes|string|max:20',
             'avatar_url'    => 'sometimes|url|max:500',
             'bio'           => 'sometimes|string|max:500',
@@ -338,12 +351,59 @@ class AuthController extends Controller
             $validated = array_merge($validated, $techValidated);
         }
 
+        if (isset($validated['email'])) {
+            $validated['email'] = strtolower(trim($validated['email']));
+        }
+
+        if (isset($validated['name'])) {
+            $validated['name'] = strip_tags($validated['name']);
+        }
+
         $user->update($validated);
 
         return response()->json([
             'success' => true,
             'message' => 'Perfil actualizado correctamente.',
             'data'    => $user->fresh(),
+        ]);
+    }
+
+    // =========================================================
+    // CAMBIAR CONTRASEÑA
+    // =========================================================
+    public function changePassword(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'current_password' => 'required|string',
+            'password'         => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>\-_]).+$/',
+            ],
+        ], [
+            'current_password.required' => 'La contraseña actual es obligatoria.',
+            'password.confirmed'        => 'La confirmación de contraseña no coincide.',
+            'password.regex'            => 'La contraseña debe tener al menos una mayúscula, una minúscula, un número y un carácter especial.',
+        ]);
+
+        if (! Hash::check($validated['current_password'], $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La contraseña actual no es correcta.',
+            ], 422);
+        }
+
+        $user->forceFill([
+            'password' => Hash::make($validated['password']),
+        ])->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Contraseña actualizada correctamente.',
         ]);
     }
 
