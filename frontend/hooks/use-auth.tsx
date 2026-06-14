@@ -3,6 +3,8 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
+
 interface User {
   id: number
   name: string
@@ -50,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   try {
     // Verificar token contra el backend en cada carga
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/me`,
+      `${API_URL}/me`,
       {
         headers: {
           Authorization: `Bearer ${token}`,

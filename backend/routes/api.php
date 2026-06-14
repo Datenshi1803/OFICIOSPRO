@@ -50,6 +50,9 @@ Route::middleware('auth:sanctum', 'throttle:api')->group(function () {
         ]);
     });
 
+    Route::put('/me/profile', [AuthController::class, 'updateProfile']);
+    Route::put('/me/password', [AuthController::class, 'changePassword']);
+
     // ── Pagos y cuota ─────────────────────────────────────────────────────────
     Route::get('/me/quota',              [PaymentController::class, 'quota'])->name('quota.show');
     Route::get('/me/payments',           [PaymentController::class, 'history'])->name('payments.history');

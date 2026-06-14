@@ -87,6 +87,61 @@ export async function logoutUser(): Promise<void> {
   localStorage.removeItem('user');
 }
 
+export interface UpdateProfileData {
+  name: string;
+  email: string;
+}
+
+export interface ChangePasswordData {
+  current_password: string;
+  password: string;
+  password_confirmation: string;
+}
+
+export async function updateMyProfile(data: UpdateProfileData): Promise<{ success: boolean; message: string; data: any }> {
+  const token = localStorage.getItem('token');
+
+  const response = await fetch(`${API_URL}/me/profile`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error('Error en el servidor');
+  }
+
+  return result;
+}
+
+export async function changeMyPassword(data: ChangePasswordData): Promise<{ success: boolean; message: string }> {
+  const token = localStorage.getItem('token');
+
+  const response = await fetch(`${API_URL}/me/password`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error('Error en el servidor');
+  }
+
+  return result;
+}
+
 // ============================================================
 // USER MANAGEMENT (Admin)
 // ============================================================
